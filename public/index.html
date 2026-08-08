@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Live Meet Translator — Sarvam AI</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 660px;
+    margin: 32px auto;
+    padding: 0 20px;
+    line-height: 1.5;
+    background: #f9f9f9;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .subtitle { color: #666; font-size: 0.9rem; margin-bottom: 20px; }
+
+  .how-it-works {
+    background: #e8f4fd;
+    border: 1px solid #b3d9f5;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 0.88rem;
+    color: #1a4f72;
+  }
+  .how-it-works strong { display: block; margin-bottom: 4px; }
+
+  .role-row { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  .role-btn {
+    flex: 1; min-width: 180px;
+    padding: 14px 16px; border-radius: 10px;
+    border: 2px solid #ddd; background: #fff;
+    cursor: pointer; text-align: left;
+    font-size: 0.95rem;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .role-btn .role-title { font-weight: 600; display: block; margin-bottom: 2px; }
+  .role-btn .role-sub   { font-size: 0.8rem; color: #888; }
+  .role-btn.selected    { border-color: #111; background: #111; color: #fff; }
+  .role-btn.selected .role-sub { color: #aaa; }
+
+  .lang-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .lang-group label {
+    display: block; font-size: 0.75rem;
+    text-transform: uppercase; letter-spacing: 0.05em;
+    color: #888; margin-bottom: 4px;
+  }
+  select {
+    font-size: 0.95rem; padding: 8px 12px;
+    border-radius: 8px; border: 1px solid #ccc; background: #fff;
+  }
+
+  .btn-row { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  button.action {
+    font-size: 1rem; padding: 10px 20px;
+    border-radius: 8px; border: none;
+    cursor: pointer; font-weight: 500;
+  }
+  button.action:disabled { opacity: 0.45; cursor: not-allowed; }
+  #startBtn { background: #111; color: #fff; }
+  #stopBtn  { background: #b3261e; color: #fff; }
+
+  #status { font-size: 0.88rem; color: #555; margin-bottom: 14px; min-height: 1.3em; }
+  #status.listening { color: #1a7a3c; font-weight: 500; }
+
+  .step-hint {
+    background: #fff8e1; border: 1px solid #ffe082;
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 0.84rem; color: #6d4c00;
+    margin-bottom: 16px; display: none;
+  }
+  .step-hint.visible { display: block; }
+
+  .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 480px) { .panels { grid-template-columns: 1fr; } }
+  .panel {
+    background: #fff; border: 1px solid #e0e0e0;
+    border-radius: 10px; padding: 14px 16px; min-height: 80px;
+  }
+  .panel-label {
+    font-size: 0.72rem; text-transform: uppercase;
+    letter-spacing: 0.05em; color: #999; margin-bottom: 6px;
+  }
+  .panel-text { font-size: 1.05rem; color: #111; min-height: 1.4em; }
+
+  .err { color: #b3261e; font-size: 0.88rem; margin-top: 12px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+
+<h1>🌐 Live Meet Translator</h1>
+<p class="subtitle">Powered by Sarvam AI — real-time voice translation for Google Meet calls</p>
+
+<div class="how-it-works">
+  <strong>How to use during a Google Meet call</strong>
+  1. Keep Google Meet open in one tab and this page in another tab.<br>
+  2. Pick your role below.<br>
+  3. Click <b>Start Translating</b> → when the popup appears, pick the <b>Google Meet tab</b> and tick <b>"Share tab audio"</b>.<br>
+  4. Wear headphones — you'll hear the translated voice here while talking normally in Meet.
+</div>
+
+<!-- Role picker -->
+<div class="role-row">
+  <button class="role-btn selected" id="roleRep" onclick="setRole('rep')">
+    <span class="role-title">🧑‍💼 I'm the Sales Rep</span>
+    <span class="role-sub">Translate client's Hindi/Tamil → English for me</span>
+  </button>
+  <button class="role-btn" id="roleClient" onclick="setRole('client')">
+    <span class="role-title">👤 I'm the Client</span>
+    <span class="role-sub">Translate rep's English → my language</span>
+  </button>
+  <button class="role-btn" id="roleCustom" onclick="setRole('custom')">
+    <span class="role-title">⚙️ Custom</span>
+    <span class="role-sub">Choose languages manually</span>
+  </button>
+</div>
+
+<!-- Custom language selects — only visible for "custom" role -->
+<div class="lang-row" id="customLangs" style="display:none">
+  <div class="lang-group">
+    <label>Translate FROM (what I hear in Meet)</label>
+    <select id="sourceLang">
+      <option value="unknown">Auto-detect</option>
+      <option value="en-IN">English</option>
+      <option value="hi-IN">Hindi</option>
+      <option value="ta-IN">Tamil</option>
+      <option value="te-IN">Telugu</option>
+      <option value="kn-IN">Kannada</option>
+      <option value="ml-IN">Malayalam</option>
+      <option value="mr-IN">Marathi</option>
+      <option value="bn-IN">Bengali</option>
+      <option value="gu-IN">Gujarati</option>
+      <option value="pa-IN">Punjabi</option>
+    </select>
+  </div>
+  <div class="lang-group">
+    <label>Translate TO (what I want to hear)</label>
+    <select id="targetLang">
+      <option value="en-IN">English</option>
+      <option value="hi-IN">Hindi</option>
+      <option value="ta-IN">Tamil</option>
+      <option value="te-IN">Telugu</option>
+      <option value="kn-IN">Kannada</option>
+      <option value="ml-IN">Malayalam</option>
+      <option value="mr-IN">Marathi</option>
+      <option value="bn-IN">Bengali</option>
+      <option value="gu-IN">Gujarati</option>
+      <option value="pa-IN">Punjabi</option>
+    </select>
+  </div>
+</div>
+
+<!-- Step hint shown just before the browser popup -->
+<div class="step-hint" id="stepHint">
+  👆 In the popup — select your <b>Google Meet tab</b> and make sure
+  <b>"Share tab audio"</b> is ticked at the bottom before clicking Share.
+</div>
+
+<div class="btn-row">
+  <button class="action" id="startBtn">▶ Start Translating</button>
+  <button class="action" id="stopBtn" disabled>⏹ Stop</button>
+</div>
+
+<p id="status">Choose your role and click Start.</p>
+
+<div class="panels">
+  <div class="panel">
+    <div class="panel-label" id="heardLabel">Heard in Meet</div>
+    <div class="panel-text" id="heardText">—</div>
+  </div>
+  <div class="panel">
+    <div class="panel-label" id="translatedLabel">Translation (you hear this)</div>
+    <div class="panel-text" id="translatedText">—</div>
+  </div>
+</div>
+
+<div id="errorBox" class="err"></div>
+
+<script>
+// ── state ───────────────────────────────────────────────────────────────────
+let currentRole = "rep";
+let ws = null;
+let audioCtx = null;
+let mediaStream = null;
+let sourceNode = null;
+let processorNode = null;
+let playbackCtx = null;
+let nextStartTime = 0;
+
+// ── role logic ───────────────────────────────────────────────────────────────
+function setRole(role) {
+  currentRole = role;
+  ["rep", "client", "custom"].forEach(r => {
+    const id = "role" + r.charAt(0).toUpperCase() + r.slice(1);
+    document.getElementById(id).classList.toggle("selected", r === role);
+  });
+  document.getElementById("customLangs").style.display =
+    role === "custom" ? "flex" : "none";
+
+  // Update panel labels
+  const d = getDirection();
+  document.getElementById("heardLabel").textContent =
+    `Heard in Meet (${d.sourceLabel})`;
+  document.getElementById("translatedLabel").textContent =
+    `You hear — ${d.targetLabel}`;
+}
+
+function getDirection() {
+  if (currentRole === "rep") {
+    // Rep hears client speaking Hindi/Tamil → translate to English
+    return { source: "unknown", target: "en-IN",
+             sourceLabel: "Client's language", targetLabel: "English" };
+  }
+  if (currentRole === "client") {
+    // Client hears rep speaking English → translate to Hindi by default
+    return { source: "en-IN", target: "hi-IN",
+             sourceLabel: "English", targetLabel: "Hindi" };
+  }
+  // custom
+  const src = document.getElementById("sourceLang").value;
+  const tgt = document.getElementById("targetLang").value;
+  return { source: src, target: tgt,
+           sourceLabel: langName(src), targetLabel: langName(tgt) };
+}
+
+function langName(code) {
+  const map = {
+    "unknown":"Auto","en-IN":"English","hi-IN":"Hindi","ta-IN":"Tamil",
+    "te-IN":"Telugu","kn-IN":"Kannada","ml-IN":"Malayalam",
+    "mr-IN":"Marathi","bn-IN":"Bengali","gu-IN":"Gujarati","pa-IN":"Punjabi"
+  };
+  return map[code] || code;
+}
+
+// ── audio playback ───────────────────────────────────────────────────────────
+function getPlaybackCtx() {
+  if (!playbackCtx) {
+    playbackCtx = new (window.AudioContext || window.webkitAudioContext)();
+    nextStartTime = playbackCtx.currentTime;
+  }
+  return playbackCtx;
+}
+
+async function enqueueAudio(base64) {
+  const byteStr = atob(base64);
+  const bytes = new Uint8Array(byteStr.length);
+  for (let i = 0; i < byteStr.length; i++) bytes[i] = byteStr.charCodeAt(i);
+  const ctx = getPlaybackCtx();
+  let buf;
+  try {
+    buf = await ctx.decodeAudioData(bytes.buffer.slice(0));
+  } catch (e) { showError("Audio decode error: " + e.message); return; }
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.connect(ctx.destination);
+  const startAt = Math.max(nextStartTime, ctx.currentTime);
+  src.start(startAt);
+  nextStartTime = startAt + buf.duration;
+}
+
+// ── WAV encoding ─────────────────────────────────────────────────────────────
+function encodeWav(float32, rate) {
+  const n = float32.length;
+  const buf = new ArrayBuffer(44 + n * 2);
+  const v = new DataView(buf);
+  const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o+i, s.charCodeAt(i)); };
+  str(0,"RIFF"); v.setUint32(4, 36+n*2, true);
+  str(8,"WAVE"); str(12,"fmt ");
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,rate,true); v.setUint32(28,rate*2,true);
+  v.setUint16(32,2,true); v.setUint16(34,16,true);
+  str(36,"data"); v.setUint32(40,n*2,true);
+  let o = 44;
+  for (let i = 0; i < n; i++, o+=2) {
+    const s = Math.max(-1, Math.min(1, float32[i]));
+    v.setInt16(o, s < 0 ? s*0x8000 : s*0x7fff, true);
+  }
+  return buf;
+}
+
+function toBase64(buf) {
+  let b = ""; const u = new Uint8Array(buf);
+  for (let i = 0; i < u.length; i += 0x8000)
+    b += String.fromCharCode.apply(null, u.subarray(i, i+0x8000));
+  return btoa(b);
+}
+
+// ── START ─────────────────────────────────────────────────────────────────────
+async function start() {
+  errorBox.textContent = "";
+  heardText.textContent = "—";
+  translatedText.textContent = "—";
+  if (playbackCtx) { playbackCtx.close(); playbackCtx = null; }
+
+  document.getElementById("stepHint").classList.add("visible");
+  setStatus("Waiting for you to share the Google Meet tab…");
+
+  // ── THE KEY CHANGE: capture Meet tab audio, not microphone ──
+  let displayStream;
+  try {
+    displayStream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,   // browser requires video:true even though we don't use it
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        sampleRate: 16000
+      }
+    });
+  } catch (e) {
+    setStatus("Tab sharing cancelled.");
+    document.getElementById("stepHint").classList.remove("visible");
+    showError("Please share the Google Meet tab to use the translator. Click Start and try again.");
+    return;
+  }
+
+  // We only need audio — stop the video track immediately
+  const audioTracks = displayStream.getAudioTracks();
+  displayStream.getVideoTracks().forEach(t => t.stop());
+
+  if (audioTracks.length === 0) {
+    showError('No audio captured. In the share popup, make sure "Share tab audio" checkbox is ticked.');
+    setStatus("No audio — see error below.");
+    return;
+  }
+
+  mediaStream = new MediaStream(audioTracks);
+
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+  const rate = audioCtx.sampleRate;
+
+  sourceNode = audioCtx.createMediaStreamSource(mediaStream);
+  processorNode = audioCtx.createScriptProcessor(4096, 1, 1);
+
+  let samplesBuffer = [];
+  const CHUNK_SAMPLES = rate * 0.5; // send 0.5s chunks
+
+  processorNode.onaudioprocess = (e) => {
+    const input = e.inputBuffer.getChannelData(0);
+    samplesBuffer.push(new Float32Array(input));
+    const total = samplesBuffer.reduce((n, a) => n + a.length, 0);
+    if (total >= CHUNK_SAMPLES) {
+      const merged = new Float32Array(total);
+      let off = 0;
+      for (const a of samplesBuffer) { merged.set(a, off); off += a.length; }
+      samplesBuffer = [];
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "audio_chunk", audio: toBase64(encodeWav(merged, rate)) }));
+      }
+    }
+  };
+
+  sourceNode.connect(processorNode);
+  processorNode.connect(audioCtx.destination);
+
+  // Auto-stop if user clicks "Stop sharing" in the browser bar
+  audioTracks[0].onended = () => {
+    setStatus("Tab sharing ended — translator stopped.");
+    stop();
+  };
+
+  // Open WebSocket to server
+  const proto = location.protocol === "https:" ? "wss:" : "ws:";
+  ws = new WebSocket(`${proto}//${location.host}/session`);
+
+  ws.onopen = () => {
+    const dir = getDirection();
+    setStatus("Connecting to Sarvam AI…");
+    ws.send(JSON.stringify({
+      type: "start",
+      sourceLang: dir.source,
+      targetLang: dir.target
+    }));
+  };
+
+  ws.onmessage = (evt) => {
+    const msg = JSON.parse(evt.data);
+    if (msg.type === "ready") {
+      setStatus("✅ Listening to Meet tab… speak naturally.", "listening");
+      document.getElementById("stepHint").classList.remove("visible");
+    } else if (msg.type === "caption") {
+      const dir = getDirection();
+      // "en" captions = original heard text, others = translated
+      if (msg.lang === "en" || msg.lang === dir.source) {
+        heardText.textContent = msg.text;
+      } else {
+        translatedText.textContent = msg.text;
+      }
+    } else if (msg.type === "audio") {
+      enqueueAudio(msg.audio);
+    } else if (msg.type === "error") {
+      showError(`[${msg.stage}] ${JSON.stringify(msg.detail)}`);
+    }
+  };
+
+  ws.onclose = () => setStatus("Disconnected.");
+  ws.onerror = () => showError("WebSocket error — is the server running?");
+
+  startBtn.disabled = true;
+  stopBtn.disabled = false;
+}
+
+// ── STOP ──────────────────────────────────────────────────────────────────────
+function stop() {
+  if (ws?.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "stop" }));
+    ws.close();
+  }
+  try { processorNode?.disconnect(); } catch {}
+  try { sourceNode?.disconnect(); } catch {}
+  try { audioCtx?.close(); } catch {}
+  mediaStream?.getTracks().forEach(t => t.stop());
+
+  setStatus("Stopped.");
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+  document.getElementById("stepHint").classList.remove("visible");
+}
+
+function setStatus(text, cls) {
+  const el = document.getElementById("status");
+  el.textContent = text;
+  el.className = cls || "";
+}
+function showError(t) { errorBox.textContent = t; }
+
+// DOM refs
+const startBtn       = document.getElementById("startBtn");
+const stopBtn        = document.getElementById("stopBtn");
+const heardText      = document.getElementById("heardText");
+const translatedText = document.getElementById("translatedText");
+const errorBox       = document.getElementById("errorBox");
+
+startBtn.addEventListener("click", () => start().catch(e => showError(e.message)));
+stopBtn.addEventListener("click", stop);
+
+// Set initial labels
+setRole("rep");
+</script>
+</body>
+</html>
