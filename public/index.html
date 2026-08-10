@@ -15,7 +15,6 @@
   h1 { font-size: 1.4rem; margin-bottom: 4px; }
   .subtitle { color: #666; font-size: 0.9rem; margin-bottom: 20px; }
 
-  /* Room join screen */
   .screen { display: none; }
   .screen.active { display: block; }
 
@@ -30,44 +29,79 @@
     display: block; font-size: 0.75rem; text-transform: uppercase;
     letter-spacing: 0.05em; color: #888; margin-bottom: 4px;
   }
-  .field input, .field select {
+  .field input {
     width: 100%; font-size: 1rem; padding: 10px 12px;
     border-radius: 8px; border: 1px solid #ccc; background: #fff;
   }
-  .field input:focus, .field select:focus {
-    outline: none; border-color: #534AB7;
-  }
+  .field input:focus { outline: none; border-color: #534AB7; }
 
-  .role-row { display: flex; gap: 10px; margin-bottom: 16px; }
-  .role-btn {
-    flex: 1; padding: 14px 12px; border-radius: 10px;
-    border: 2px solid #ddd; background: #fff;
-    cursor: pointer; text-align: center; font-size: 0.9rem;
-    transition: all 0.15s;
-  }
-  .role-btn .role-icon  { font-size: 1.6rem; display: block; margin-bottom: 4px; }
-  .role-btn .role-title { font-weight: 600; display: block; }
-  .role-btn .role-sub   { font-size: 0.75rem; color: #888; }
-  .role-btn.selected    { border-color: #111; background: #111; color: #fff; }
-  .role-btn.selected .role-sub { color: #aaa; }
-
-  /* Language row — only for custom */
+  /* Language selects for custom role */
   .lang-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
   .lang-group { flex: 1; min-width: 140px; }
   .lang-group label {
     display: block; font-size: 0.75rem; text-transform: uppercase;
     letter-spacing: 0.05em; color: #888; margin-bottom: 4px;
   }
-  .lang-group select { width: 100%; font-size: 0.9rem; padding: 8px 10px; border-radius: 8px; border: 1px solid #ccc; }
+  .lang-group select {
+    width: 100%; font-size: 0.9rem; padding: 8px 10px;
+    border-radius: 8px; border: 1px solid #ccc; background: #fff;
+  }
 
   /* Buttons */
   .btn-primary {
     width: 100%; padding: 12px; font-size: 1rem; font-weight: 600;
     background: #111; color: #fff; border: none; border-radius: 10px;
-    cursor: pointer; transition: opacity 0.15s;
+    cursor: pointer; transition: opacity 0.15s; margin-bottom: 10px;
   }
   .btn-primary:hover { opacity: 0.85; }
   .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary {
+    width: 100%; padding: 12px; font-size: 1rem; font-weight: 600;
+    background: #fff; color: #111; border: 2px solid #111;
+    border-radius: 10px; cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn-secondary:hover { background: #f5f5f5; }
+
+  /* Share box — shown after rep creates room */
+  .share-box {
+    background: #E1F5EE; border: 1px solid #a5d6b7;
+    border-radius: 10px; padding: 14px 16px; margin-bottom: 14px;
+    display: none;
+  }
+  .share-box.visible { display: block; }
+  .share-box-title { font-size: 0.8rem; font-weight: 600; color: #085041;
+                     text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .share-link-row { display: flex; gap: 8px; align-items: center; }
+  .share-link-input {
+    flex: 1; font-size: 0.82rem; padding: 8px 10px;
+    border-radius: 8px; border: 1px solid #a5d6b7;
+    background: #fff; color: #111; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+  }
+  .btn-copy {
+    padding: 8px 14px; font-size: 0.85rem; font-weight: 600;
+    background: #085041; color: #fff; border: none;
+    border-radius: 8px; cursor: pointer; white-space: nowrap;
+    transition: opacity .15s;
+  }
+  .btn-copy:hover { opacity: 0.85; }
+  .copy-confirm { font-size: 0.8rem; color: #085041; margin-top: 6px;
+                  min-height: 1.2em; font-weight: 500; }
+
+  /* Client auto-join card */
+  .client-card {
+    background: #fff; border: 1px solid #e0e0e0;
+    border-radius: 14px; padding: 24px; margin-bottom: 16px;
+    text-align: center;
+  }
+  .client-card .client-icon { font-size: 3rem; margin-bottom: 8px; }
+  .client-card h2 { font-size: 1.1rem; margin: 0 0 6px; }
+  .client-card .client-room {
+    display: inline-block; background: #EEEDFE; color: #3C3489;
+    padding: 4px 14px; border-radius: 99px; font-size: 0.85rem;
+    font-weight: 500; margin-bottom: 16px;
+  }
+  .client-card p { font-size: 0.88rem; color: #666; margin-bottom: 16px; }
 
   /* Call screen */
   .call-header {
@@ -78,49 +112,54 @@
     background: #EEEDFE; color: #3C3489;
     padding: 4px 12px; border-radius: 99px; font-size: 0.85rem; font-weight: 500;
   }
+  .role-badge {
+    padding: 4px 12px; border-radius: 99px; font-size: 0.82rem; font-weight: 500;
+  }
+  .role-badge.rep    { background: #111; color: #fff; }
+  .role-badge.client { background: #534AB7; color: #fff; }
+
   .btn-stop {
     padding: 8px 18px; font-size: 0.9rem; font-weight: 600;
-    background: #b3261e; color: #fff; border: none; border-radius: 8px; cursor: pointer;
+    background: #b3261e; color: #fff; border: none;
+    border-radius: 8px; cursor: pointer;
   }
 
-  /* Partner status */
   .partner-status {
     border-radius: 10px; padding: 10px 14px;
-    font-size: 0.88rem; margin-bottom: 14px; text-align: center;
-    border: 1px solid;
+    font-size: 0.88rem; margin-bottom: 14px; text-align: center; border: 1px solid;
   }
-  .partner-status.waiting  { background: #fff8e1; border-color: #ffe082; color: #6d4c00; }
-  .partner-status.joined   { background: #E1F5EE; border-color: #a5d6b7; color: #085041; }
-  .partner-status.left     { background: #FAECE7; border-color: #f5c4b3; color: #712B13; }
+  .partner-status.waiting { background: #fff8e1; border-color: #ffe082; color: #6d4c00; }
+  .partner-status.joined  { background: #E1F5EE; border-color: #a5d6b7; color: #085041; }
+  .partner-status.left    { background: #FAECE7; border-color: #f5c4b3; color: #712B13; }
 
-  /* Mic status */
-  #micStatus {
-    font-size: 0.88rem; margin-bottom: 14px;
-    min-height: 1.3em; font-weight: 500;
-  }
+  #micStatus { font-size: 0.88rem; margin-bottom: 14px; min-height: 1.3em; font-weight: 500; }
   #micStatus.listening { color: #1a7a3c; }
   #micStatus.playing   { color: #b36a00; }
   #micStatus.waiting   { color: #888; }
 
-  /* Caption panels */
   .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
   @media (max-width: 460px) { .panels { grid-template-columns: 1fr; } }
   .panel {
     background: #fff; border: 1px solid #e0e0e0;
     border-radius: 10px; padding: 14px 16px; min-height: 90px;
   }
-  .panel-label {
-    font-size: 0.72rem; text-transform: uppercase;
-    letter-spacing: 0.05em; color: #999; margin-bottom: 6px;
-  }
-  .panel-text { font-size: 1.05rem; color: #111; min-height: 1.4em; }
-
-  .err { color: #b3261e; font-size: 0.88rem; margin-top: 10px; white-space: pre-wrap; }
+  .panel-label { font-size: 0.72rem; text-transform: uppercase;
+                 letter-spacing: 0.05em; color: #999; margin-bottom: 6px; }
+  .panel-text  { font-size: 1.05rem; color: #111; min-height: 1.4em; }
 
   .tip {
     background: #e8f4fd; border: 1px solid #b3d9f5;
     border-radius: 8px; padding: 10px 14px;
     font-size: 0.82rem; color: #1a4f72; margin-bottom: 16px;
+  }
+  .err { color: #b3261e; font-size: 0.88rem; margin-top: 10px; white-space: pre-wrap; }
+
+  .divider {
+    display: flex; align-items: center; gap: 10px;
+    margin: 14px 0; color: #aaa; font-size: 0.82rem;
+  }
+  .divider::before, .divider::after {
+    content: ""; flex: 1; height: 1px; background: #e0e0e0;
   }
 </style>
 </head>
@@ -129,50 +168,30 @@
 <h1>🌐 Live Translator</h1>
 <p class="subtitle">Powered by Sarvam AI — real-time two-way voice translation</p>
 
-<!-- ── JOIN SCREEN ─────────────────────────────────────────────────── -->
-<div class="screen active" id="joinScreen">
+<!-- ══════════════════════════════════════════════════
+     SCREEN 1A — SALES REP (creates room)
+════════════════════════════════════════════════════ -->
+<div class="screen active" id="repScreen">
 
   <div class="tip">
-    💡 Both you and your client open this same link. Enter the <b>same Room Code</b> to connect. What you speak goes to them — what they speak comes to you.
+    💡 <b>Sales Rep:</b> Create a room and share the link with your client. They'll join automatically as a client.
   </div>
 
   <div class="join-card">
-    <h2>Join a Translation Room</h2>
+    <h2>🧑‍💼 Create a Translation Room</h2>
 
-    <!-- Room code -->
     <div class="field">
-      <label>Room Code (share this with the other person)</label>
-      <input type="text" id="roomCodeInput" placeholder="e.g. helloleads-demo1"
-             value="" maxlength="30" autocomplete="off" spellcheck="false"/>
+      <label>Room Name (anything you like)</label>
+      <input type="text" id="repRoomInput"
+             placeholder="e.g. helloleads-demo1"
+             maxlength="30" autocomplete="off" spellcheck="false"/>
     </div>
 
-    <!-- Role -->
-    <div class="field">
-      <label>I am the…</label>
-      <div class="role-row">
-        <button class="role-btn selected" id="roleRep" onclick="setRole('rep')">
-          <span class="role-icon">🧑‍💼</span>
-          <span class="role-title">Sales Rep</span>
-          <span class="role-sub">I speak English</span>
-        </button>
-        <button class="role-btn" id="roleClient" onclick="setRole('client')">
-          <span class="role-icon">👤</span>
-          <span class="role-title">Client</span>
-          <span class="role-sub">I speak Hindi/Tamil</span>
-        </button>
-        <button class="role-btn" id="roleCustom" onclick="setRole('custom')">
-          <span class="role-icon">⚙️</span>
-          <span class="role-title">Custom</span>
-          <span class="role-sub">Choose languages</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Custom language selects -->
-    <div class="lang-row" id="customLangs" style="display:none">
+    <!-- Optional: custom language for rep -->
+    <div class="lang-row">
       <div class="lang-group">
-        <label>I speak (my language)</label>
-        <select id="sourceLang">
+        <label>I speak</label>
+        <select id="repSourceLang">
           <option value="en-IN">English</option>
           <option value="hi-IN">Hindi</option>
           <option value="ta-IN">Tamil</option>
@@ -186,11 +205,11 @@
         </select>
       </div>
       <div class="lang-group">
-        <label>Other person speaks</label>
-        <select id="targetLang">
+        <label>Client speaks</label>
+        <select id="repTargetLang">
           <option value="hi-IN">Hindi</option>
-          <option value="en-IN">English</option>
           <option value="ta-IN">Tamil</option>
+          <option value="en-IN">English</option>
           <option value="te-IN">Telugu</option>
           <option value="kn-IN">Kannada</option>
           <option value="ml-IN">Malayalam</option>
@@ -202,30 +221,85 @@
       </div>
     </div>
 
-    <button class="btn-primary" id="joinBtn" onclick="joinRoom()">
-      🎙️ Join Room & Start
+    <!-- Share box — appears after room is created -->
+    <div class="share-box" id="shareBox">
+      <div class="share-box-title">📤 Share this link with your client</div>
+      <div class="share-link-row">
+        <input class="share-link-input" id="shareLinkInput" readonly />
+        <button class="btn-copy" onclick="copyLink()">Copy</button>
+      </div>
+      <div class="copy-confirm" id="copyConfirm"></div>
+    </div>
+
+    <button class="btn-primary" id="createRoomBtn" onclick="createRoom()">
+      🔗 Create Room & Get Share Link
     </button>
-    <div id="joinError" class="err"></div>
+
+    <div class="divider">already have a link?</div>
+
+    <button class="btn-secondary" onclick="showClientScreen(null)">
+      👤 I'm a Client — join with a link
+    </button>
+
+    <div id="repError" class="err"></div>
   </div>
 </div>
 
-<!-- ── CALL SCREEN ─────────────────────────────────────────────────── -->
+<!-- ══════════════════════════════════════════════════
+     SCREEN 1B — CLIENT (auto-join from link)
+════════════════════════════════════════════════════ -->
+<div class="screen" id="clientScreen">
+  <div class="client-card">
+    <div class="client-icon">👤</div>
+    <h2>You've been invited to a translation session</h2>
+    <div class="client-room" id="clientRoomBadge">Room: —</div>
+    <p>You'll join as the <b>Client</b>. The sales rep's words will be translated to your language automatically.</p>
+
+    <!-- Client picks their own language -->
+    <div class="lang-row" style="text-align:left;margin-bottom:16px">
+      <div class="lang-group" style="flex:1">
+        <label>I speak</label>
+        <select id="clientLang">
+          <option value="hi-IN">Hindi</option>
+          <option value="ta-IN">Tamil</option>
+          <option value="te-IN">Telugu</option>
+          <option value="kn-IN">Kannada</option>
+          <option value="ml-IN">Malayalam</option>
+          <option value="mr-IN">Marathi</option>
+          <option value="bn-IN">Bengali</option>
+          <option value="gu-IN">Gujarati</option>
+          <option value="pa-IN">Punjabi</option>
+          <option value="en-IN">English</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="clientJoinBtn" onclick="clientJoin()">
+      🎙️ Join Session
+    </button>
+    <div id="clientError" class="err"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 2 — ACTIVE CALL
+════════════════════════════════════════════════════ -->
 <div class="screen" id="callScreen">
 
   <div class="call-header">
-    <span class="room-badge" id="roomBadge">Room: —</span>
-    <button class="btn-stop" onclick="leaveRoom()">Leave Room</button>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span class="room-badge" id="callRoomBadge">Room: —</span>
+      <span class="role-badge" id="callRoleBadge">—</span>
+    </div>
+    <button class="btn-stop" onclick="leaveRoom()">Leave</button>
   </div>
 
-  <!-- Partner connection status -->
   <div class="partner-status waiting" id="partnerStatus">
-    ⏳ Waiting for the other person to join room <b id="partnerRoomHint"></b>…
+    ⏳ Waiting for the other person to join…
   </div>
 
-  <!-- Mic status -->
   <p id="micStatus" class="waiting">Initialising…</p>
 
-  <!-- Caption panels -->
   <div class="panels">
     <div class="panel">
       <div class="panel-label">You said</div>
@@ -241,8 +315,128 @@
 </div>
 
 <script>
-// ── state ─────────────────────────────────────────────────────────────────────
-let currentRole   = "rep";
+// ── URL param helpers ─────────────────────────────────────────────────────────
+function getParam(key) {
+  return new URLSearchParams(window.location.search).get(key);
+}
+
+// ── On page load: check if client link ───────────────────────────────────────
+window.addEventListener("DOMContentLoaded", () => {
+  const room = getParam("room");
+  const role = getParam("role");
+
+  if (room && role === "client") {
+    // Client arrived via shared link — go straight to client screen
+    showClientScreen(room);
+  }
+  // else: show rep screen by default
+});
+
+// ── Show client screen ────────────────────────────────────────────────────────
+function showClientScreen(roomCode) {
+  document.getElementById("repScreen").classList.remove("active");
+  document.getElementById("clientScreen").classList.add("active");
+
+  if (roomCode) {
+    document.getElementById("clientRoomBadge").textContent = `Room: ${roomCode}`;
+    // Pre-select client language based on URL param if provided
+    const lang = getParam("lang");
+    if (lang) {
+      const sel = document.getElementById("clientLang");
+      if ([...sel.options].some(o => o.value === lang)) sel.value = lang;
+    }
+  } else {
+    document.getElementById("clientRoomBadge").textContent = "Room: enter code from rep";
+  }
+}
+
+// ── Rep: create room + generate share link ────────────────────────────────────
+function createRoom() {
+  const roomCode = document.getElementById("repRoomInput").value.trim();
+  if (!roomCode) {
+    document.getElementById("repError").textContent = "Please enter a room name.";
+    return;
+  }
+  document.getElementById("repError").textContent = "";
+
+  const targetLang = document.getElementById("repTargetLang").value;
+
+  // Build the share link for client — role + room + client's expected language baked in
+  const base = `${location.origin}${location.pathname}`;
+  const shareUrl = `${base}?room=${encodeURIComponent(roomCode)}&role=client&lang=${targetLang}`;
+
+  document.getElementById("shareLinkInput").value = shareUrl;
+  document.getElementById("shareBox").classList.add("visible");
+  document.getElementById("createRoomBtn").textContent = "▶ Start Session";
+  document.getElementById("createRoomBtn").onclick = () => repJoin(roomCode);
+}
+
+function copyLink() {
+  const val = document.getElementById("shareLinkInput").value;
+  navigator.clipboard.writeText(val).then(() => {
+    document.getElementById("copyConfirm").textContent = "✅ Link copied! Share it with your client.";
+    setTimeout(() => { document.getElementById("copyConfirm").textContent = ""; }, 3000);
+  });
+}
+
+// ── Rep joins after sharing link ──────────────────────────────────────────────
+async function repJoin(roomCode) {
+  document.getElementById("createRoomBtn").disabled = true;
+  const sourceLang = document.getElementById("repSourceLang").value;
+  const targetLang = document.getElementById("repTargetLang").value;
+  try {
+    await startTranslation(roomCode, "rep", sourceLang, targetLang);
+    showCallScreen(roomCode, "rep");
+  } catch (e) {
+    document.getElementById("repError").textContent = e.message;
+    document.getElementById("createRoomBtn").disabled = false;
+  }
+}
+
+// ── Client joins from link ────────────────────────────────────────────────────
+async function clientJoin() {
+  const roomCode = getParam("room") || prompt("Enter the room code from your sales rep:");
+  if (!roomCode) return;
+
+  document.getElementById("clientJoinBtn").disabled = true;
+  document.getElementById("clientError").textContent = "";
+
+  // Client's source = their own language, target = rep's language (English)
+  const clientLang = document.getElementById("clientLang").value;
+  const repLang    = getParam("repLang") || "en-IN"; // default rep speaks English
+
+  try {
+    await startTranslation(roomCode, "client", clientLang, repLang);
+    showCallScreen(roomCode, "client");
+  } catch (e) {
+    document.getElementById("clientError").textContent = e.message;
+    document.getElementById("clientJoinBtn").disabled = false;
+  }
+}
+
+// ── Show call screen ──────────────────────────────────────────────────────────
+function showCallScreen(roomCode, role) {
+  document.getElementById("repScreen").classList.remove("active");
+  document.getElementById("clientScreen").classList.remove("active");
+  document.getElementById("callScreen").classList.add("active");
+
+  document.getElementById("callRoomBadge").textContent = `Room: ${roomCode}`;
+
+  const roleBadge = document.getElementById("callRoleBadge");
+  if (role === "rep") {
+    roleBadge.textContent = "🧑‍💼 Sales Rep";
+    roleBadge.className   = "role-badge rep";
+    document.getElementById("theyHearLabel").textContent = "Client hears";
+  } else {
+    roleBadge.textContent = "👤 Client";
+    roleBadge.className   = "role-badge client";
+    document.getElementById("theyHearLabel").textContent = "Rep hears";
+  }
+}
+
+// ══════════════════════════════════════════════════
+// TRANSLATION ENGINE
+// ══════════════════════════════════════════════════
 let ws            = null;
 let audioCtx      = null;
 let mediaStream   = null;
@@ -252,56 +446,12 @@ let playbackCtx   = null;
 let nextStartTime = 0;
 let isMuted       = false;
 let muteTimer     = null;
+let activeRoom    = null;
+let activeRole    = null;
 
-// ── role picker ───────────────────────────────────────────────────────────────
-function setRole(role) {
-  currentRole = role;
-  ["rep","client","custom"].forEach(r => {
-    const id = "role" + r.charAt(0).toUpperCase() + r.slice(1);
-    document.getElementById(id).classList.toggle("selected", r === role);
-  });
-  document.getElementById("customLangs").style.display =
-    role === "custom" ? "flex" : "none";
-}
-
-function getDirection() {
-  if (currentRole === "rep")
-    return { source: "en-IN", target: "hi-IN" };
-  if (currentRole === "client")
-    return { source: "hi-IN", target: "en-IN" };
-  return {
-    source: document.getElementById("sourceLang").value,
-    target: document.getElementById("targetLang").value
-  };
-}
-
-// ── room join ─────────────────────────────────────────────────────────────────
-async function joinRoom() {
-  const code = document.getElementById("roomCodeInput").value.trim();
-  if (!code) {
-    document.getElementById("joinError").textContent = "Please enter a room code.";
-    return;
-  }
-  document.getElementById("joinError").textContent = "";
-  document.getElementById("joinBtn").disabled = true;
-
-  try {
-    await startTranslation(code);
-    // Switch screens
-    document.getElementById("joinScreen").classList.remove("active");
-    document.getElementById("callScreen").classList.add("active");
-    document.getElementById("roomBadge").textContent      = `Room: ${code}`;
-    document.getElementById("partnerRoomHint").textContent = code;
-    document.getElementById("theyHearLabel").textContent  =
-      currentRole === "rep" ? "Client hears (Hindi)" : "Rep hears (English)";
-  } catch (e) {
-    document.getElementById("joinError").textContent = e.message;
-    document.getElementById("joinBtn").disabled = false;
-  }
-}
-
-// ── translation engine ────────────────────────────────────────────────────────
-async function startTranslation(roomCode) {
+async function startTranslation(roomCode, role, sourceLang, targetLang) {
+  activeRoom = roomCode;
+  activeRole = role;
   if (playbackCtx) { playbackCtx.close(); playbackCtx = null; }
   isMuted = false;
 
@@ -320,11 +470,11 @@ async function startTranslation(roomCode) {
   sourceNode    = audioCtx.createMediaStreamSource(mediaStream);
   processorNode = audioCtx.createScriptProcessor(4096, 1, 1);
 
-  let samplesBuffer = [];
+  let samplesBuffer   = [];
   const CHUNK_SAMPLES = rate * 0.5;
 
   processorNode.onaudioprocess = (e) => {
-    if (isMuted) return;  // muted while translation plays
+    if (isMuted) return;
     const input = e.inputBuffer.getChannelData(0);
     samplesBuffer.push(new Float32Array(input));
     const total = samplesBuffer.reduce((n, a) => n + a.length, 0);
@@ -345,19 +495,17 @@ async function startTranslation(roomCode) {
   sourceNode.connect(processorNode);
   processorNode.connect(audioCtx.destination);
 
-  // WebSocket
   const proto = location.protocol === "https:" ? "wss:" : "ws:";
   ws = new WebSocket(`${proto}//${location.host}/session`);
 
   return new Promise((resolve, reject) => {
     ws.onopen = () => {
-      const dir = getDirection();
       ws.send(JSON.stringify({
         type:       "start",
         roomCode:   roomCode,
-        role:       currentRole,
-        sourceLang: dir.source,
-        targetLang: dir.target
+        role:       role,
+        sourceLang: sourceLang,
+        targetLang: targetLang
       }));
     };
 
@@ -368,37 +516,25 @@ async function startTranslation(roomCode) {
         setMicStatus("✅ Listening — speak now.", "listening");
         resolve();
       }
-
       else if (msg.type === "partner_joined") {
-        setPartnerStatus("joined",
-          `✅ The other person has joined the room — you're connected!`);
+        setPartnerStatus("joined", "✅ Connected! Both parties are in the room.");
       }
-
       else if (msg.type === "partner_left") {
-        setPartnerStatus("left",
-          "⚠️ The other person has left the room.");
+        setPartnerStatus("left", "⚠️ The other person has left the room.");
       }
-
       else if (msg.type === "caption") {
         if (msg.lang === "source") {
-          // What YOU said
           document.getElementById("youSaidText").textContent = msg.text;
         } else {
-          // Translation going to the other person
           document.getElementById("theyHearText").textContent = msg.text;
         }
       }
-
       else if (msg.type === "audio") {
-        // Audio plays on the PARTNER's device — not yours
-        // (server sends audio only to the partner)
         enqueueAudio(msg.audio);
       }
-
       else if (msg.type === "error") {
         if (msg.stage === "room") {
-          setPartnerStatus("waiting",
-            "⏳ Waiting for the other person to join…");
+          setPartnerStatus("waiting", "⏳ Waiting for the other person to join…");
         } else {
           showCallError(`[${msg.stage}] ${JSON.stringify(msg.detail)}`);
         }
@@ -406,10 +542,7 @@ async function startTranslation(roomCode) {
     };
 
     ws.onclose = () => setMicStatus("Disconnected.", "waiting");
-    ws.onerror = (e) => {
-      showCallError("WebSocket error — check server.");
-      reject(new Error("WebSocket failed"));
-    };
+    ws.onerror = () => reject(new Error("WebSocket connection failed — is the server running?"));
   });
 }
 
@@ -425,10 +558,13 @@ function leaveRoom() {
   try { audioCtx?.close(); } catch {}
   mediaStream?.getTracks().forEach(t => t.stop());
 
-  // Back to join screen
+  // Back to start
   document.getElementById("callScreen").classList.remove("active");
-  document.getElementById("joinScreen").classList.add("active");
-  document.getElementById("joinBtn").disabled = false;
+  document.getElementById("repScreen").classList.add("active");
+  document.getElementById("createRoomBtn").disabled = false;
+  document.getElementById("createRoomBtn").textContent = "🔗 Create Room & Get Share Link";
+  document.getElementById("createRoomBtn").onclick = createRoom;
+  document.getElementById("shareBox").classList.remove("visible");
   document.getElementById("youSaidText").textContent  = "—";
   document.getElementById("theyHearText").textContent = "—";
   showCallError("");
@@ -461,7 +597,7 @@ async function enqueueAudio(base64) {
   const ctx = getPlaybackCtx();
   let buf;
   try { buf = await ctx.decodeAudioData(bytes.buffer.slice(0)); }
-  catch (e) { showCallError("Audio decode error: " + e.message); return; }
+  catch (e) { showCallError("Audio decode: " + e.message); return; }
   const src = ctx.createBufferSource();
   src.buffer = buf; src.connect(ctx.destination);
   const startAt = Math.max(nextStartTime, ctx.currentTime);
@@ -471,42 +607,38 @@ async function enqueueAudio(base64) {
 }
 
 // ── WAV encoding ──────────────────────────────────────────────────────────────
-function encodeWav(float32, rate) {
-  const n = float32.length, buf = new ArrayBuffer(44+n*2), v = new DataView(buf);
-  const str = (o,s) => { for(let i=0;i<s.length;i++) v.setUint8(o+i,s.charCodeAt(i)); };
-  str(0,"RIFF"); v.setUint32(4,36+n*2,true); str(8,"WAVE"); str(12,"fmt ");
-  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
-  v.setUint32(24,rate,true); v.setUint32(28,rate*2,true);
-  v.setUint16(32,2,true); v.setUint16(34,16,true);
-  str(36,"data"); v.setUint32(40,n*2,true);
-  let o=44; for(let i=0;i<n;i++,o+=2){
-    const s=Math.max(-1,Math.min(1,float32[i]));
-    v.setInt16(o,s<0?s*0x8000:s*0x7fff,true);
+function encodeWav(f, r) {
+  const n=f.length, b=new ArrayBuffer(44+n*2), v=new DataView(b);
+  const s=(o,x)=>{for(let i=0;i<x.length;i++)v.setUint8(o+i,x.charCodeAt(i));};
+  s(0,"RIFF");v.setUint32(4,36+n*2,true);s(8,"WAVE");s(12,"fmt ");
+  v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,r,true);v.setUint32(28,r*2,true);
+  v.setUint16(32,2,true);v.setUint16(34,16,true);
+  s(36,"data");v.setUint32(40,n*2,true);
+  let o=44;for(let i=0;i<n;i++,o+=2){
+    const x=Math.max(-1,Math.min(1,f[i]));
+    v.setInt16(o,x<0?x*0x8000:x*0x7fff,true);
   }
-  return buf;
+  return b;
 }
 function toBase64(buf) {
-  let b=""; const u=new Uint8Array(buf);
+  let b="";const u=new Uint8Array(buf);
   for(let i=0;i<u.length;i+=0x8000)
     b+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));
   return btoa(b);
 }
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
-function setMicStatus(text, cls) {
+function setMicStatus(t, cls) {
   const el = document.getElementById("micStatus");
-  el.textContent = text; el.className = cls || "waiting";
+  el.textContent = t; el.className = cls || "waiting";
 }
 function setPartnerStatus(type, text) {
   const el = document.getElementById("partnerStatus");
   el.className = `partner-status ${type}`;
   el.innerHTML = text;
 }
-function showCallError(t) {
-  document.getElementById("callError").textContent = t;
-}
-
-setRole("rep");
+function showCallError(t) { document.getElementById("callError").textContent = t; }
 </script>
 </body>
 </html>
