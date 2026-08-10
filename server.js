@@ -1,24 +1,3 @@
-// server.js
-// Companion server for live speech translation using Sarvam AI.
-//
-// Pipeline per spoken utterance:
-//   Browser mic audio
-//     -> this server
-//       -> Sarvam Speech-to-Text WebSocket (mode=translate, saaras:v3) => English text
-//       -> if targetLang !== English: Sarvam Translation REST API => target-language text
-//       -> Sarvam Text-to-Speech REST API (bulbul:v3) => one complete WAV clip
-//     -> back to browser for playback
-//
-// Note: an earlier version of this used the TTS *WebSocket* to stream audio
-// chunks progressively. Those chunks are fragments of one continuous stream
-// and aren't independently playable - relaying each one as its own audio
-// clip (as the first version of this file did) is what caused the
-// stuttering/broken audio. The REST endpoint returns one complete, clean
-// WAV file per call instead, which is far more reliable for this use case
-// at the cost of a small amount of latency.
-//
-// The Sarvam API key NEVER goes to the browser - it only lives here on the server.
-
 import "dotenv/config";
 import express from "express";
 import http from "http";
@@ -29,125 +8,116 @@ const PORT = process.env.PORT || 3000;
 const SARVAM_API_KEY = process.env.SARVAM_API_KEY;
 
 if (!SARVAM_API_KEY) {
-  console.error(
-    "Missing SARVAM_API_KEY. Copy .env.example to .env and add your key from https://dashboard.sarvam.ai/"
-  );
+  console.error("Missing SARVAM_API_KEY in .env");
   process.exit(1);
 }
 
-const STT_URL = "wss://api.sarvam.ai/speech-to-text/ws";
-const TTS_URL = "https://api.sarvam.ai/text-to-speech"; // REST, not WebSocket
+const STT_URL       = "wss://api.sarvam.ai/speech-to-text/ws";
+const TTS_URL       = "https://api.sarvam.ai/text-to-speech";
 const TRANSLATE_URL = "https://api.sarvam.ai/translate";
-
-// Valid bulbul:v3 speakers (confirmed via a live 422 error from the API):
-// aditya, ritu, ashutosh, priya, neha, rahul, pooja, rohan, simran, kavya,
-// amit, dev, ishita, shreya, ratan, varun, manan, sumit, roopa, kabir, aayan,
-// shubh, advait, anand, tanya, tarun, sunny, mani, gokul, vijay, shruti,
-// suhani, mohit, kavitha, rehan, soham, rupali, niharika
-// (Note: this list is specific to bulbul:v3 - older bulbul versions used
-// different speaker names like "anushka", which is why that failed.)
 const DEFAULT_SPEAKER = "shubh";
 
 const app = express();
 app.use(express.static("public"));
-
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/session" });
 
+// ── rooms ─────────────────────────────────────────────────────────────────────
+// rooms = { "roomCode": { rep: wsClient, client: wsClient } }
+const rooms = {};
+
+function getRoom(code) {
+  if (!rooms[code]) rooms[code] = { rep: null, client: null };
+  return rooms[code];
+}
+
+function getPartner(roomCode, myRole) {
+  const room = rooms[roomCode];
+  if (!room) return null;
+  return myRole === "rep" ? room.client : room.rep;
+}
+
+function cleanRoom(roomCode, role) {
+  if (!rooms[roomCode]) return;
+  rooms[roomCode][role] = null;
+  // Delete room if both left
+  if (!rooms[roomCode].rep && !rooms[roomCode].client) {
+    delete rooms[roomCode];
+    console.log(`[room:${roomCode}] deleted`);
+  }
+}
+
+// ── per-client handler ────────────────────────────────────────────────────────
 wss.on("connection", (clientWs) => {
   console.log("[client] connected");
 
-  let sourceLangCode = "unknown"; // BCP-47, e.g. "ta-IN"; "unknown" = auto-detect
-  let targetLangCode = "hi-IN"; // where we want the spoken output
-  let sttWs = null;
-  // Utterances can finish out of order relative to how long TTS takes, so
-  // queue outgoing audio and play it in the order it was spoken.
+  let roomCode   = null;
+  let myRole     = null;   // "rep" or "client"
+  let sourceLang = "en-IN";
+  let targetLang = "hi-IN";
+  let sttWs      = null;
   let speakQueue = Promise.resolve();
 
   function openStt() {
     const params = new URLSearchParams({
-      "language-code": sourceLangCode,
+      "language-code": sourceLang,
       model: "saaras:v3",
-      mode: "translate", // Sarvam translates speech -> English text for us
+      mode: "translate",  // Sarvam auto-translates speech to English text
       sample_rate: "16000"
     });
 
-    sttWs = new WebSocket(`${STT_URL}?${params.toString()}`, {
+    sttWs = new WebSocket(`${STT_URL}?${params}`, {
       headers: { "Api-Subscription-Key": SARVAM_API_KEY }
     });
 
-    sttWs.on("open", () => console.log("[stt] connected"));
+    sttWs.on("open", () => console.log(`[stt:${myRole}] connected`));
 
     sttWs.on("message", async (raw) => {
       let msg;
-      try {
-        msg = JSON.parse(raw.toString());
-      } catch {
-        return;
-      }
-      if (msg.type === "data" && msg.data && msg.data.transcript) {
+      try { msg = JSON.parse(raw.toString()); } catch { return; }
+
+      if (msg.type === "data" && msg.data?.transcript) {
         const englishText = msg.data.transcript.trim();
         if (!englishText) return;
-        safeSend(clientWs, { type: "caption", lang: "en", text: englishText });
+
+        // Send original caption back to SPEAKER (so they see what they said)
+        safeSend(clientWs, { type: "caption", lang: "source", text: englishText });
+
+        // Translate and send audio to PARTNER only
         await translateAndSpeak(englishText);
       } else if (msg.type === "error") {
-        console.error("[stt] error message:", msg);
+        console.error(`[stt:${myRole}] error:`, msg);
         safeSend(clientWs, { type: "error", stage: "stt", detail: msg });
       }
     });
 
     sttWs.on("close", (code, reason) =>
-      console.log("[stt] closed", code, reason.toString())
+      console.log(`[stt:${myRole}] closed`, code, reason.toString())
     );
     sttWs.on("error", (err) => {
-      console.error("[stt] socket error:", err.message);
+      console.error(`[stt:${myRole}] error:`, err.message);
       safeSend(clientWs, { type: "error", stage: "stt", detail: err.message });
     });
   }
 
-  // Fetches one complete WAV clip for `text` and sends it to the browser.
-  // Queued so clips are sent (and therefore played) in speaking order even
-  // if two TTS requests happen to resolve out of order.
-  function speak(text) {
-    speakQueue = speakQueue.then(() => synthesizeAndSend(text));
-    return speakQueue;
-  }
-
-  async function synthesizeAndSend(text) {
-    try {
-      const res = await fetch(TTS_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "api-subscription-key": SARVAM_API_KEY
-        },
-        body: JSON.stringify({
-          text,
-          language_code: targetLangCode,
-          speaker: DEFAULT_SPEAKER,
-          model: "bulbul:v3",
-          pace: 1.0,
-          output_audio_codec: "wav"
-        })
-      });
-      if (!res.ok) {
-        const errBody = await res.text();
-        throw new Error(`TTS API ${res.status}: ${errBody}`);
-      }
-      const data = await res.json();
-      const audioBase64 = data.audios && data.audios[0];
-      if (!audioBase64) throw new Error("TTS response had no audio");
-      safeSend(clientWs, { type: "audio", audio: audioBase64, mime: "audio/wav" });
-    } catch (err) {
-      console.error("[tts] error:", err.message);
-      safeSend(clientWs, { type: "error", stage: "tts", detail: err.message });
-    }
-  }
-
   async function translateAndSpeak(englishText) {
+    // Find the partner — translation goes to THEM not to the speaker
+    const partnerWs = getPartner(roomCode, myRole);
+
+    if (!partnerWs || partnerWs.readyState !== WebSocket.OPEN) {
+      // No partner connected yet — notify speaker
+      safeSend(clientWs, {
+        type: "error",
+        stage: "room",
+        detail: "Waiting for the other person to join the room…"
+      });
+      return;
+    }
+
     let outText = englishText;
 
-    if (targetLangCode !== "en-IN") {
+    // Translate to partner's language
+    if (targetLang !== "en-IN") {
       try {
         const res = await fetch(TRANSLATE_URL, {
           method: "POST",
@@ -158,82 +128,118 @@ wss.on("connection", (clientWs) => {
           body: JSON.stringify({
             input: englishText,
             source_language_code: "en-IN",
-            target_language_code: targetLangCode,
+            target_language_code: targetLang,
             model: "sarvam-translate:v1"
           })
         });
-        if (!res.ok) {
-          const errBody = await res.text();
-          throw new Error(`Translate API ${res.status}: ${errBody}`);
-        }
+        if (!res.ok) throw new Error(`Translate ${res.status}: ${await res.text()}`);
         const data = await res.json();
         outText = data.translated_text || englishText;
-        safeSend(clientWs, {
-          type: "caption",
-          lang: targetLangCode,
-          text: outText
-        });
+
+        // Send translated caption to PARTNER
+        safeSend(partnerWs, { type: "caption", lang: "translated", text: outText });
       } catch (err) {
         console.error("[translate] error:", err.message);
         safeSend(clientWs, { type: "error", stage: "translate", detail: err.message });
-        // Fall back to speaking the English text rather than dropping the turn.
       }
+    } else {
+      // Target is English — send caption directly to partner
+      safeSend(partnerWs, { type: "caption", lang: "translated", text: outText });
     }
 
-    speak(outText);
+    // Synthesize and send audio to PARTNER
+    speakQueue = speakQueue.then(() => synthesizeAndSend(outText, partnerWs, targetLang));
+  }
+
+  async function synthesizeAndSend(text, targetWs, langCode) {
+    try {
+      const res = await fetch(TTS_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-subscription-key": SARVAM_API_KEY
+        },
+        body: JSON.stringify({
+          text,
+          language_code: langCode,
+          speaker: DEFAULT_SPEAKER,
+          model: "bulbul:v3",
+          pace: 1.0,
+          output_audio_codec: "wav"
+        })
+      });
+      if (!res.ok) throw new Error(`TTS ${res.status}: ${await res.text()}`);
+      const data = await res.json();
+      const audio = data.audios?.[0];
+      if (!audio) throw new Error("TTS returned no audio");
+
+      // Send audio to PARTNER's device
+      safeSend(targetWs, { type: "audio", audio, mime: "audio/wav" });
+    } catch (err) {
+      console.error("[tts] error:", err.message);
+      safeSend(clientWs, { type: "error", stage: "tts", detail: err.message });
+    }
   }
 
   clientWs.on("message", (raw) => {
     let msg;
-    try {
-      msg = JSON.parse(raw.toString());
-    } catch {
-      return;
-    }
+    try { msg = JSON.parse(raw.toString()); } catch { return; }
 
     if (msg.type === "start") {
-      sourceLangCode = msg.sourceLang || "unknown";
-      targetLangCode = msg.targetLang || "hi-IN";
+      roomCode   = msg.roomCode || "default";
+      myRole     = msg.role || "rep";       // "rep" or "client"
+      sourceLang = msg.sourceLang || "en-IN";
+      targetLang = msg.targetLang || "hi-IN";
+
+      // Join the room
+      const room = getRoom(roomCode);
+      room[myRole] = clientWs;
+      console.log(`[room:${roomCode}] ${myRole} joined`);
+
+      // Notify partner that the other person joined
+      const partnerWs = getPartner(roomCode, myRole);
+      if (partnerWs?.readyState === WebSocket.OPEN) {
+        safeSend(partnerWs, { type: "partner_joined", role: myRole });
+        safeSend(clientWs,  { type: "partner_joined", role: myRole === "rep" ? "client" : "rep" });
+      }
+
       openStt();
       safeSend(clientWs, { type: "ready" });
       return;
     }
 
     if (msg.type === "audio_chunk" && msg.audio) {
-      // msg.audio is a base64-encoded mono 16kHz 16-bit PCM WAV chunk
-      if (sttWs && sttWs.readyState === WebSocket.OPEN) {
-        sttWs.send(
-          JSON.stringify({
-            audio: {
-              data: msg.audio,
-              sample_rate: "16000",
-              encoding: "audio/wav"
-            }
-          })
-        );
+      if (sttWs?.readyState === WebSocket.OPEN) {
+        sttWs.send(JSON.stringify({
+          audio: { data: msg.audio, sample_rate: "16000", encoding: "audio/wav" }
+        }));
       }
       return;
     }
 
-    if (msg.type === "stop") {
-      closeUpstream();
-    }
+    if (msg.type === "stop") closeUpstream();
   });
 
   clientWs.on("close", () => {
-    console.log("[client] disconnected");
+    console.log(`[room:${roomCode}] ${myRole} disconnected`);
+    // Notify partner that other person left
+    const partnerWs = getPartner(roomCode, myRole);
+    if (partnerWs?.readyState === WebSocket.OPEN) {
+      safeSend(partnerWs, { type: "partner_left" });
+    }
     closeUpstream();
+    if (roomCode && myRole) cleanRoom(roomCode, myRole);
   });
 
   function closeUpstream() {
-    try { sttWs && sttWs.close(); } catch {}
+    try { sttWs?.close(); } catch {}
   }
 });
 
 function safeSend(ws, obj) {
-  if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+  if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
 }
 
-server.listen(PORT, () => {
-  console.log(`Live translator server running at http://localhost:${PORT}`);
-});
+server.listen(PORT, () =>
+  console.log(`Translator running at http://localhost:${PORT}`)
+);
