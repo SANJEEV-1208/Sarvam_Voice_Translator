@@ -217,6 +217,27 @@ wss.on("connection", (clientWs) => {
       return;
     }
 
+    // ── NEW: relay "I'm speaking / I stopped speaking" to the partner ──────────
+    // Lets the UI show "X is speaking — please wait" so people don't talk
+    // over each other.
+    if (msg.type === "speaking") {
+      const partnerWs = getPartner(roomCode, myRole);
+      safeSend(partnerWs, { type: "partner_speaking", speaking: !!msg.value });
+      return;
+    }
+
+    // ── NEW: relay "translated audio is about to play on my device" back to
+    // the ORIGINAL SPEAKER so their mic pauses too. Without this, when two
+    // people are in the same room without earphones, the listener's device
+    // plays audio out loud, the speaker's still-open mic picks it back up,
+    // and it gets mis-transcribed as new speech (the "only works with
+    // earphones" symptom).
+    if (msg.type === "audio_playing") {
+      const partnerWs = getPartner(roomCode, myRole);
+      safeSend(partnerWs, { type: "mute_request", ms: msg.ms || 1500 });
+      return;
+    }
+
     if (msg.type === "stop") closeUpstream();
   });
 

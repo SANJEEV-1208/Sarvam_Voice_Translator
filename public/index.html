@@ -128,9 +128,10 @@
     border-radius: 10px; padding: 10px 14px;
     font-size: 0.88rem; margin-bottom: 14px; text-align: center; border: 1px solid;
   }
-  .partner-status.waiting { background: #fff8e1; border-color: #ffe082; color: #6d4c00; }
-  .partner-status.joined  { background: #E1F5EE; border-color: #a5d6b7; color: #085041; }
-  .partner-status.left    { background: #FAECE7; border-color: #f5c4b3; color: #712B13; }
+  .partner-status.waiting  { background: #fff8e1; border-color: #ffe082; color: #6d4c00; }
+  .partner-status.joined   { background: #E1F5EE; border-color: #a5d6b7; color: #085041; }
+  .partner-status.left     { background: #FAECE7; border-color: #f5c4b3; color: #712B13; }
+  .partner-status.speaking { background: #FFF3E0; border-color: #ffcc80; color: #8a5a00; }
 
   #micStatus { font-size: 0.88rem; margin-bottom: 14px; min-height: 1.3em; font-weight: 500; }
   #micStatus.listening { color: #1a7a3c; }
@@ -449,11 +450,18 @@ let muteTimer     = null;
 let activeRoom    = null;
 let activeRole    = null;
 
+// --- NEW: local speaking-detection state ---
+let localSpeaking     = false;
+let speakingStopTimer = null;
+const SPEAKING_THRESHOLD   = 0.02;  // RMS level considered "speaking" — tune per mic
+const SPEAKING_HOLD_MS     = 700;   // how long to wait after volume drops before saying "stopped"
+
 async function startTranslation(roomCode, role, sourceLang, targetLang) {
   activeRoom = roomCode;
   activeRole = role;
   if (playbackCtx) { playbackCtx.close(); playbackCtx = null; }
   isMuted = false;
+  localSpeaking = false;
 
   // Request mic
   try {
@@ -476,6 +484,29 @@ async function startTranslation(roomCode, role, sourceLang, targetLang) {
   processorNode.onaudioprocess = (e) => {
     if (isMuted) return;
     const input = e.inputBuffer.getChannelData(0);
+
+    // --- NEW: lightweight volume-based speaking detector ---
+    let sumSquares = 0;
+    for (let i = 0; i < input.length; i++) sumSquares += input[i] * input[i];
+    const rms = Math.sqrt(sumSquares / input.length);
+
+    if (rms > SPEAKING_THRESHOLD) {
+      if (!localSpeaking) {
+        localSpeaking = true;
+        if (ws?.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "speaking", value: true }));
+        }
+      }
+      clearTimeout(speakingStopTimer);
+      speakingStopTimer = setTimeout(() => {
+        localSpeaking = false;
+        if (ws?.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "speaking", value: false }));
+        }
+      }, SPEAKING_HOLD_MS);
+    }
+
+    // --- existing buffering / send-to-STT logic ---
     samplesBuffer.push(new Float32Array(input));
     const total = samplesBuffer.reduce((n, a) => n + a.length, 0);
     if (total >= CHUNK_SAMPLES) {
@@ -522,6 +553,19 @@ async function startTranslation(roomCode, role, sourceLang, targetLang) {
       else if (msg.type === "partner_left") {
         setPartnerStatus("left", "⚠️ The other person has left the room.");
       }
+      // --- NEW: partner speaking indicator ---
+      else if (msg.type === "partner_speaking") {
+        const who = activeRole === "rep" ? "Client" : "Rep";
+        if (msg.speaking) {
+          setPartnerStatus("speaking", `🗣️ ${who} is speaking — please wait…`);
+        } else {
+          setPartnerStatus("joined", "✅ Connected! Both parties are in the room.");
+        }
+      }
+      // --- NEW: server asks us to pause our mic because our audio is about to play on partner's device ---
+      else if (msg.type === "mute_request") {
+        muteMic(msg.ms || 1500);
+      }
       else if (msg.type === "caption") {
         if (msg.lang === "source") {
           document.getElementById("youSaidText").textContent = msg.text;
@@ -552,7 +596,9 @@ function leaveRoom() {
     ws.close();
   }
   clearTimeout(muteTimer);
+  clearTimeout(speakingStopTimer);
   isMuted = false;
+  localSpeaking = false;
   try { processorNode?.disconnect(); } catch {}
   try { sourceNode?.disconnect(); } catch {}
   try { audioCtx?.close(); } catch {}
@@ -578,7 +624,7 @@ function muteMic(durationMs) {
   muteTimer = setTimeout(() => {
     isMuted = false;
     setMicStatus("✅ Listening — speak now.", "listening");
-  }, durationMs + 500);
+  }, durationMs + 800); // extra headroom for speaker output latency
 }
 
 // ── audio playback ────────────────────────────────────────────────────────────
@@ -603,7 +649,16 @@ async function enqueueAudio(base64) {
   const startAt = Math.max(nextStartTime, ctx.currentTime);
   src.start(startAt);
   nextStartTime = startAt + buf.duration;
-  muteMic((nextStartTime - ctx.currentTime) * 1000);
+
+  const playMs = (nextStartTime - ctx.currentTime) * 1000;
+  muteMic(playMs);
+
+  // --- NEW: tell the server so it can ask the ORIGINAL SPEAKER's device
+  // to pause its mic too — otherwise, without earphones, this device's
+  // speaker output gets picked back up by the other person's open mic. ---
+  if (ws?.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "audio_playing", ms: Math.ceil(playMs) }));
+  }
 }
 
 // ── WAV encoding ──────────────────────────────────────────────────────────────
