@@ -129,7 +129,8 @@ wss.on("connection", (clientWs) => {
             input: englishText,
             source_language_code: "en-IN",
             target_language_code: targetLang,
-            model: "sarvam-translate:v1"
+            model: "mayura:v1",
+            mode: "modern-colloquial"   // natural spoken register, not written/formal Tamil
           })
         });
         if (!res.ok) throw new Error(`Translate ${res.status}: ${await res.text()}`);
