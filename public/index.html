@@ -108,6 +108,40 @@
   }
   .client-card p { font-size: 0.88rem; color: #666; margin-bottom: 16px; }
 
+  /* Meeting info */
+  .meeting-info {
+    background: #FFF8E1; border: 1px solid #FFD54F;
+    border-radius: 8px; padding: 12px 16px;
+    font-size: 0.82rem; color: #5D4037;
+    margin-bottom: 14px;
+    display: none;
+  }
+  .meeting-info.visible { display: block; }
+  .meeting-info .label { font-weight: 600; margin-right: 8px; }
+
+  /* Expiry warning */
+  .expiry-warning {
+    background: #FFF3E0; border: 1px solid #FF9800;
+    border-radius: 8px; padding: 12px 16px;
+    font-size: 0.82rem; color: #E65100;
+    margin-bottom: 14px;
+    display: none;
+  }
+  .expiry-warning.visible { display: block; }
+  .expiry-warning .label { font-weight: 600; margin-right: 8px; }
+  .expiry-warning .timer { font-weight: 700; color: #D32F2F; }
+
+  .expired-overlay {
+    background: #FAECE7; border: 2px solid #D32F2F;
+    border-radius: 14px; padding: 24px;
+    text-align: center; margin-bottom: 16px;
+    display: none;
+  }
+  .expired-overlay.visible { display: block; }
+  .expired-overlay .icon { font-size: 3rem; margin-bottom: 8px; }
+  .expired-overlay h2 { color: #D32F2F; margin: 0 0 8px; }
+  .expired-overlay p { color: #666; margin: 0 0 16px; }
+
   /* Call screen */
   .call-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -137,6 +171,7 @@
   .partner-status.joined   { background: #E1F5EE; border-color: #a5d6b7; color: #085041; }
   .partner-status.left     { background: #FAECE7; border-color: #f5c4b3; color: #712B13; }
   .partner-status.speaking { background: #FFF3E0; border-color: #ffcc80; color: #8a5a00; }
+  .partner-status.expired  { background: #FAECE7; border-color: #D32F2F; color: #D32F2F; }
 
   #micStatus { font-size: 0.88rem; margin-bottom: 14px; min-height: 1.3em; font-weight: 500; }
   #micStatus.listening { color: #1a7a3c; }
@@ -300,6 +335,28 @@
     <button class="btn-stop" onclick="leaveRoom()">Leave</button>
   </div>
 
+  <div class="meeting-info" id="meetingInfo">
+    <span class="label">📅 Meeting Info:</span>
+    <span id="meetingCreatedAt">Created: —</span>
+    <span style="margin:0 8px">|</span>
+    <span id="meetingExpiresAt">Expires: —</span>
+  </div>
+
+  <div class="expiry-warning" id="expiryWarning">
+    <span class="label">⏰ Meeting Expiring Soon!</span>
+    <span>This link will expire in <span class="timer" id="expiryTimer">5</span> minutes.</span>
+    <br><small>Please generate a new link if you need more time.</small>
+  </div>
+
+  <div class="expired-overlay" id="expiredOverlay">
+    <div class="icon">⛔</div>
+    <h2>Meeting Expired</h2>
+    <p id="expiredMessage">This meeting link has expired. Please ask the sales representative to generate a new link.</p>
+    <button class="btn-primary" onclick="leaveRoom()" style="width:auto;padding:10px 24px;">
+      Return to Start
+    </button>
+  </div>
+
   <div class="partner-status waiting" id="partnerStatus">
     ⏳ Waiting for the other person to join…
   </div>
@@ -454,6 +511,7 @@ let isMuted       = false;
 let muteTimer     = null;
 let activeRoom    = null;
 let activeRole    = null;
+let expiryTimeout = null;
 
 // --- NEW: local speaking-detection state ---
 let localSpeaking     = false;
@@ -558,7 +616,6 @@ async function startTranslation(roomCode, role, sourceLang, targetLang) {
       else if (msg.type === "partner_left") {
         setPartnerStatus("left", "⚠️ The other person has left the room.");
       }
-      // --- NEW: partner speaking indicator ---
       else if (msg.type === "partner_speaking") {
         const who = activeRole === "rep" ? "Client" : "Rep";
         if (msg.speaking) {
@@ -567,7 +624,6 @@ async function startTranslation(roomCode, role, sourceLang, targetLang) {
           setPartnerStatus("joined", "✅ Connected! Both parties are in the room.");
         }
       }
-      // --- NEW: server asks us to pause our mic because our audio is about to play on partner's device ---
       else if (msg.type === "mute_request") {
         muteMic(msg.ms || 1500);
       }
@@ -581,9 +637,35 @@ async function startTranslation(roomCode, role, sourceLang, targetLang) {
       else if (msg.type === "audio") {
         enqueueAudio(msg.audio);
       }
+      else if (msg.type === "meeting_info") {
+        // Show meeting info (rep only)
+        const infoEl = document.getElementById("meetingInfo");
+        infoEl.classList.add("visible");
+        document.getElementById("meetingCreatedAt").textContent = `Created: ${msg.createdAt}`;
+        document.getElementById("meetingExpiresAt").textContent = `Expires: ${msg.expiresAt}`;
+      }
+      else if (msg.type === "meeting_expiring") {
+        // Show expiry warning (rep only)
+        const warningEl = document.getElementById("expiryWarning");
+        warningEl.classList.add("visible");
+        document.getElementById("expiryTimer").textContent = msg.minutesRemaining;
+        
+        // Also show browser alert if page is active
+        if (document.visibilityState === "visible") {
+          alert(`⚠️ Meeting Expiring Soon!\n\n${msg.message}`);
+        }
+      }
+      else if (msg.type === "meeting_expired") {
+        // Meeting expired - show overlay
+        showExpiredOverlay(msg.message);
+      }
       else if (msg.type === "error") {
         if (msg.stage === "room") {
-          setPartnerStatus("waiting", "⏳ Waiting for the other person to join…");
+          if (msg.expired) {
+            showExpiredOverlay(msg.detail);
+          } else {
+            setPartnerStatus("waiting", "⏳ Waiting for the other person to join…");
+          }
         } else {
           showCallError(`[${msg.stage}] ${JSON.stringify(msg.detail)}`);
         }
@@ -595,7 +677,20 @@ async function startTranslation(roomCode, role, sourceLang, targetLang) {
   });
 }
 
+function showExpiredOverlay(message) {
+  document.getElementById("expiredOverlay").classList.add("visible");
+  document.getElementById("expiredMessage").textContent = message || "This meeting link has expired. Please ask the sales representative to generate a new link.";
+  document.getElementById("partnerStatus").className = "partner-status expired";
+  setMicStatus("⛔ Meeting Expired", "waiting");
+}
+
 function leaveRoom() {
+  // Clear expiry timeout
+  if (expiryTimeout) {
+    clearTimeout(expiryTimeout);
+    expiryTimeout = null;
+  }
+
   if (ws?.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: "stop" }));
     ws.close();
@@ -609,9 +704,19 @@ function leaveRoom() {
   try { audioCtx?.close(); } catch {}
   mediaStream?.getTracks().forEach(t => t.stop());
 
-  // Back to start
+  // Hide expiry elements
+  document.getElementById("expiredOverlay").classList.remove("visible");
+  document.getElementById("expiryWarning").classList.remove("visible");
+  document.getElementById("meetingInfo").classList.remove("visible");
+
+  // Check if user was client or rep for proper redirect
+  const wasClient = activeRole === "client";
+  
+  // Reset UI
   document.getElementById("callScreen").classList.remove("active");
   document.getElementById("repScreen").classList.add("active");
+  
+  // Reset rep-specific UI
   document.getElementById("createRoomBtn").disabled = false;
   document.getElementById("createRoomBtn").textContent = "🔗 Create Room & Get Share Link";
   document.getElementById("createRoomBtn").onclick = createRoom;
@@ -619,6 +724,22 @@ function leaveRoom() {
   document.getElementById("youSaidText").textContent  = "—";
   document.getElementById("theyHearText").textContent = "—";
   showCallError("");
+  
+  // If user was a client, show a message indicating meeting has ended
+  if (wasClient) {
+    // Show a temporary message on the rep screen for client
+    const errorEl = document.getElementById("repError");
+    errorEl.textContent = "✅ Meeting has ended. Thank you for using Live Translator!";
+    errorEl.style.color = "#1a7a3c";
+    setTimeout(() => {
+      errorEl.textContent = "";
+      errorEl.style.color = "#b3261e";
+    }, 5000);
+  }
+
+  // Reset active role
+  activeRole = null;
+  activeRoom = null;
 }
 
 // ── mute while playing ────────────────────────────────────────────────────────
