@@ -296,6 +296,14 @@
     <div class="client-room" id="clientRoomBadge">Room: —</div>
     <p>You'll join as the <b>Client</b>. The sales rep's words will be translated to your language automatically.</p>
 
+    <!-- Client Name Input -->
+    <div class="field" style="text-align:left;">
+      <label>Your Name <span style="color:#b3261e;">*</span></label>
+      <input type="text" id="clientNameInput"
+             placeholder="Enter your full name"
+             maxlength="50" autocomplete="off" spellcheck="false"/>
+    </div>
+
     <!-- Client picks their own language -->
     <div class="lang-row" style="text-align:left;margin-bottom:16px">
       <div class="lang-group" style="flex:1">
@@ -333,6 +341,11 @@
       <span class="role-badge" id="callRoleBadge">—</span>
     </div>
     <button class="btn-stop" onclick="leaveRoom()">Leave</button>
+  </div>
+
+  <!-- Client name display for rep -->
+  <div id="clientNameDisplay" style="display:none;background:#EEEDFE;padding:8px 14px;border-radius:8px;margin-bottom:14px;font-size:0.9rem;">
+    👤 <span id="clientNameText" style="font-weight:600;">—</span> has joined the session
   </div>
 
   <div class="meeting-info" id="meetingInfo">
@@ -461,6 +474,14 @@ async function clientJoin() {
   const roomCode = getParam("room") || prompt("Enter the room code from your sales rep:");
   if (!roomCode) return;
 
+  // Get client name
+  const clientName = document.getElementById("clientNameInput").value.trim();
+  if (!clientName) {
+    document.getElementById("clientError").textContent = "Please enter your name.";
+    document.getElementById("clientNameInput").focus();
+    return;
+  }
+
   document.getElementById("clientJoinBtn").disabled = true;
   document.getElementById("clientError").textContent = "";
 
@@ -469,7 +490,7 @@ async function clientJoin() {
   const repLang    = getParam("repLang") || "en-IN"; // default rep speaks English
 
   try {
-    await startTranslation(roomCode, "client", clientLang, repLang);
+    await startTranslation(roomCode, "client", clientLang, repLang, clientName);
     showCallScreen(roomCode, "client");
   } catch (e) {
     document.getElementById("clientError").textContent = e.message;
@@ -519,7 +540,7 @@ let speakingStopTimer = null;
 const SPEAKING_THRESHOLD   = 0.02;  // RMS level considered "speaking" — tune per mic
 const SPEAKING_HOLD_MS     = 700;   // how long to wait after volume drops before saying "stopped"
 
-async function startTranslation(roomCode, role, sourceLang, targetLang) {
+async function startTranslation(roomCode, role, sourceLang, targetLang, clientName) {
   activeRoom = roomCode;
   activeRole = role;
   if (playbackCtx) { playbackCtx.close(); playbackCtx = null; }
@@ -594,13 +615,18 @@ async function startTranslation(roomCode, role, sourceLang, targetLang) {
 
   return new Promise((resolve, reject) => {
     ws.onopen = () => {
-      ws.send(JSON.stringify({
+      // Send client name along with start message (if provided)
+      const startMsg = {
         type:       "start",
         roomCode:   roomCode,
         role:       role,
         sourceLang: sourceLang,
         targetLang: targetLang
-      }));
+      };
+      if (clientName) {
+        startMsg.clientName = clientName;
+      }
+      ws.send(JSON.stringify(startMsg));
     };
 
     ws.onmessage = (evt) => {
@@ -612,9 +638,15 @@ async function startTranslation(roomCode, role, sourceLang, targetLang) {
       }
       else if (msg.type === "partner_joined") {
         setPartnerStatus("joined", "✅ Connected! Both parties are in the room.");
+        // If rep receives client name, display it
+        if (activeRole === "rep" && msg.clientName) {
+          displayClientName(msg.clientName);
+        }
       }
       else if (msg.type === "partner_left") {
         setPartnerStatus("left", "⚠️ The other person has left the room.");
+        // Hide client name display when partner leaves
+        document.getElementById("clientNameDisplay").style.display = "none";
       }
       else if (msg.type === "partner_speaking") {
         const who = activeRole === "rep" ? "Client" : "Rep";
@@ -677,6 +709,14 @@ async function startTranslation(roomCode, role, sourceLang, targetLang) {
   });
 }
 
+// ── Display client name for rep ──────────────────────────────────────────────
+function displayClientName(name) {
+  const displayEl = document.getElementById("clientNameDisplay");
+  const nameEl = document.getElementById("clientNameText");
+  nameEl.textContent = name;
+  displayEl.style.display = "block";
+}
+
 function showExpiredOverlay(message) {
   document.getElementById("expiredOverlay").classList.add("visible");
   document.getElementById("expiredMessage").textContent = message || "This meeting link has expired. Please ask the sales representative to generate a new link.";
@@ -708,6 +748,7 @@ function leaveRoom() {
   document.getElementById("expiredOverlay").classList.remove("visible");
   document.getElementById("expiryWarning").classList.remove("visible");
   document.getElementById("meetingInfo").classList.remove("visible");
+  document.getElementById("clientNameDisplay").style.display = "none";
 
   // Check if user was client or rep for proper redirect
   const wasClient = activeRole === "client";

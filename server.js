@@ -29,6 +29,7 @@ const wss = new WebSocketServer({ server, path: "/session" });
 //   "roomCode": { 
 //     rep: wsClient, 
 //     client: wsClient,
+//     clientName: null,  // Store client name
 //     createdAt: timestamp,
 //     expiryWarned: false
 //   } 
@@ -40,6 +41,7 @@ function getRoom(code) {
     rooms[code] = { 
       rep: null, 
       client: null,
+      clientName: null,  // Initialize client name
       createdAt: Date.now(),
       expiryWarned: false
     };
@@ -340,6 +342,12 @@ wss.on("connection", (clientWs) => {
         return;
       }
 
+      // Store client name if provided
+      if (myRole === "client" && msg.clientName) {
+        room.clientName = msg.clientName;
+        console.log(`[room:${roomCode}] Client name: ${msg.clientName}`);
+      }
+
       // Join the room
       room[myRole] = clientWs;
       console.log(`[room:${roomCode}] ${myRole} joined at ${getISTTime(Date.now())}`);
@@ -347,7 +355,16 @@ wss.on("connection", (clientWs) => {
       // Notify partner that the other person joined
       const partnerWs = getPartner(roomCode, myRole);
       if (partnerWs?.readyState === WebSocket.OPEN) {
-        safeSend(partnerWs, { type: "partner_joined", role: myRole });
+        // Include client name in partner_joined message if available
+        const joinMsg = { 
+          type: "partner_joined", 
+          role: myRole 
+        };
+        // If the joining user is client, send their name to rep
+        if (myRole === "client" && room.clientName) {
+          joinMsg.clientName = room.clientName;
+        }
+        safeSend(partnerWs, joinMsg);
         safeSend(clientWs,  { type: "partner_joined", role: myRole === "rep" ? "client" : "rep" });
       }
 
