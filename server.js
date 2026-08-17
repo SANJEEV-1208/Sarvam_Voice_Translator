@@ -15,7 +15,7 @@ if (!SARVAM_API_KEY) {
 const STT_URL       = "wss://api.sarvam.ai/speech-to-text/ws";
 const TTS_URL       = "https://api.sarvam.ai/text-to-speech";
 const TRANSLATE_URL = "https://api.sarvam.ai/translate";
-const DEFAULT_SPEAKER = "shubh";
+const DEFAULT_SPEAKER = "priya";
 const MEETING_EXPIRY_HOURS = 1; // Meeting expires after 1 hour
 const WARNING_MINUTES = 5; // Warning 5 minutes before expiry
 
