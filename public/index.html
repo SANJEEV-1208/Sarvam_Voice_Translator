@@ -35,7 +35,7 @@
   }
   .field input:focus { outline: none; border-color: #534AB7; }
 
-  /* Language selects for custom role */
+  /* Language / voice selects for custom role */
   .lang-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
   .lang-group { flex: 1; min-width: 140px; }
   .lang-group label {
@@ -50,6 +50,11 @@
   }
   .lang-group select option {
     background: #fff; color: #111;
+  }
+
+  .section-label {
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em;
+    color: #888; margin: 18px 0 8px; font-weight: 600;
   }
 
   /* Buttons */
@@ -131,22 +136,23 @@
   .expiry-warning .label { font-weight: 600; margin-right: 8px; }
   .expiry-warning .timer { font-weight: 700; color: #D32F2F; }
 
-  .expired-overlay {
-    background: #FAECE7; border: 2px solid #D32F2F;
-    border-radius: 14px; padding: 24px;
-    text-align: center; margin-bottom: 16px;
-    display: none;
+  /* Ended / left / expired screen */
+  .ended-card {
+    background: #fff; border: 1px solid #e0e0e0;
+    border-radius: 14px; padding: 40px 24px;
+    text-align: center; margin-top: 40px;
   }
-  .expired-overlay.visible { display: block; }
-  .expired-overlay .icon { font-size: 3rem; margin-bottom: 8px; }
-  .expired-overlay h2 { color: #D32F2F; margin: 0 0 8px; }
-  .expired-overlay p { color: #666; margin: 0 0 16px; }
+  .ended-card .ended-icon { font-size: 3.2rem; margin-bottom: 10px; }
+  .ended-card h2 { font-size: 1.25rem; margin: 0 0 10px; color: #111; }
+  .ended-card p { font-size: 0.92rem; color: #666; margin: 0 0 20px; }
 
   /* Call screen */
   .call-header {
     display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 16px;
+    margin-bottom: 16px; gap: 8px; flex-wrap: wrap;
   }
+  .call-header-left { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .call-header-right { display:flex; gap:8px; align-items:center; }
   .room-badge {
     background: #EEEDFE; color: #3C3489;
     padding: 4px 12px; border-radius: 99px; font-size: 0.85rem; font-weight: 500;
@@ -163,6 +169,19 @@
     border-radius: 8px; cursor: pointer;
   }
 
+  /* Mic mute toggle — Gmeet-style */
+  .btn-mute {
+    padding: 8px 16px; font-size: 0.9rem; font-weight: 600;
+    background: #fff; color: #111; border: 2px solid #111;
+    border-radius: 8px; cursor: pointer; transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-mute:hover { background: #f5f5f5; }
+  .btn-mute.active {
+    background: #b3261e; color: #fff; border-color: #b3261e;
+  }
+  .btn-mute.active:hover { opacity: 0.85; }
+
   .partner-status {
     border-radius: 10px; padding: 10px 14px;
     font-size: 0.88rem; margin-bottom: 14px; text-align: center; border: 1px solid;
@@ -171,12 +190,12 @@
   .partner-status.joined   { background: #E1F5EE; border-color: #a5d6b7; color: #085041; }
   .partner-status.left     { background: #FAECE7; border-color: #f5c4b3; color: #712B13; }
   .partner-status.speaking { background: #FFF3E0; border-color: #ffcc80; color: #8a5a00; }
-  .partner-status.expired  { background: #FAECE7; border-color: #D32F2F; color: #D32F2F; }
 
   #micStatus { font-size: 0.88rem; margin-bottom: 14px; min-height: 1.3em; font-weight: 500; }
   #micStatus.listening { color: #1a7a3c; }
   #micStatus.playing   { color: #b36a00; }
   #micStatus.waiting   { color: #888; }
+  #micStatus.muted     { color: #b3261e; }
 
   .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
   @media (max-width: 460px) { .panels { grid-template-columns: 1fr; } }
@@ -228,7 +247,7 @@
              maxlength="30" autocomplete="off" spellcheck="false"/>
     </div>
 
-    <!-- Optional: custom language for rep -->
+    <!-- Language for rep -->
     <div class="lang-row">
       <div class="lang-group">
         <label>I speak</label>
@@ -258,6 +277,69 @@
           <option value="bn-IN">Bengali</option>
           <option value="gu-IN">Gujarati</option>
           <option value="pa-IN">Punjabi</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Voice selection — REP ONLY. Client never sees or sets this. -->
+    <div class="section-label">🔊 Voice Settings (only you can set this)</div>
+    <div class="lang-row">
+      <div class="lang-group">
+        <label>My voice (client hears this)</label>
+        <select id="repVoiceSelect">
+          <optgroup label="Male">
+            <option value="shubh">Shubh</option>
+            <option value="aditya">Aditya</option>
+            <option value="rahul">Rahul</option>
+            <option value="rohan">Rohan</option>
+            <option value="amit">Amit</option>
+            <option value="dev">Dev</option>
+            <option value="ratan">Ratan</option>
+            <option value="kabir">Kabir</option>
+            <option value="mani">Mani</option>
+            <option value="vijay">Vijay</option>
+          </optgroup>
+          <optgroup label="Female">
+            <option value="priya">Priya</option>
+            <option value="ritu">Ritu</option>
+            <option value="neha">Neha</option>
+            <option value="pooja">Pooja</option>
+            <option value="simran">Simran</option>
+            <option value="kavya">Kavya</option>
+            <option value="ishita">Ishita</option>
+            <option value="shreya">Shreya</option>
+            <option value="tanya">Tanya</option>
+            <option value="kavitha">Kavitha</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="lang-group">
+        <label>Client's voice (you hear this)</label>
+        <select id="clientVoiceSelect">
+          <optgroup label="Female">
+            <option value="priya" selected>Priya</option>
+            <option value="ritu">Ritu</option>
+            <option value="neha">Neha</option>
+            <option value="pooja">Pooja</option>
+            <option value="simran">Simran</option>
+            <option value="kavya">Kavya</option>
+            <option value="ishita">Ishita</option>
+            <option value="shreya">Shreya</option>
+            <option value="tanya">Tanya</option>
+            <option value="kavitha">Kavitha</option>
+          </optgroup>
+          <optgroup label="Male">
+            <option value="shubh">Shubh</option>
+            <option value="aditya">Aditya</option>
+            <option value="rahul">Rahul</option>
+            <option value="rohan">Rohan</option>
+            <option value="amit">Amit</option>
+            <option value="dev">Dev</option>
+            <option value="ratan">Ratan</option>
+            <option value="kabir">Kabir</option>
+            <option value="mani">Mani</option>
+            <option value="vijay">Vijay</option>
+          </optgroup>
         </select>
       </div>
     </div>
@@ -304,7 +386,7 @@
              maxlength="50" autocomplete="off" spellcheck="false"/>
     </div>
 
-    <!-- Client picks their own language -->
+    <!-- Client picks their own language (no voice controls here — rep-only) -->
     <div class="lang-row" style="text-align:left;margin-bottom:16px">
       <div class="lang-group" style="flex:1">
         <label>I speak</label>
@@ -336,11 +418,14 @@
 <div class="screen" id="callScreen">
 
   <div class="call-header">
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <div class="call-header-left">
       <span class="room-badge" id="callRoomBadge">Room: —</span>
       <span class="role-badge" id="callRoleBadge">—</span>
     </div>
-    <button class="btn-stop" onclick="leaveRoom()">Leave</button>
+    <div class="call-header-right">
+      <button class="btn-mute" id="muteBtn" onclick="toggleMute()">🎤 Mute</button>
+      <button class="btn-stop" onclick="leaveRoom()">Leave</button>
+    </div>
   </div>
 
   <!-- Client name display for rep -->
@@ -359,15 +444,6 @@
     <span class="label">⏰ Meeting Expiring Soon!</span>
     <span>This link will expire in <span class="timer" id="expiryTimer">5</span> minutes.</span>
     <br><small>Please generate a new link if you need more time.</small>
-  </div>
-
-  <div class="expired-overlay" id="expiredOverlay">
-    <div class="icon">⛔</div>
-    <h2>Meeting Expired</h2>
-    <p id="expiredMessage">This meeting link has expired. Please ask the sales representative to generate a new link.</p>
-    <button class="btn-primary" onclick="leaveRoom()" style="width:auto;padding:10px 24px;">
-      Return to Start
-    </button>
   </div>
 
   <div class="partner-status waiting" id="partnerStatus">
@@ -390,6 +466,20 @@
   <div id="callError" class="err"></div>
 </div>
 
+<!-- ══════════════════════════════════════════════════
+     SCREEN 3 — LEFT / ENDED / EXPIRED
+════════════════════════════════════════════════════ -->
+<div class="screen" id="endedScreen">
+  <div class="ended-card">
+    <div class="ended-icon" id="endedIcon">👋</div>
+    <h2 id="endedTitle">You have left the meeting</h2>
+    <p id="endedMessage">Thank you for using Live Translator!</p>
+    <button class="btn-primary" id="endedActionBtn" style="display:none;width:auto;padding:10px 24px;" onclick="restartAsRep()">
+      🔗 Start New Session
+    </button>
+  </div>
+</div>
+
 <script>
 // ── URL param helpers ─────────────────────────────────────────────────────────
 function getParam(key) {
@@ -410,7 +500,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
 // ── Show client screen ────────────────────────────────────────────────────────
 function showClientScreen(roomCode) {
-  document.getElementById("repScreen").classList.remove("active");
+  document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
   document.getElementById("clientScreen").classList.add("active");
 
   if (roomCode) {
@@ -437,7 +527,10 @@ function createRoom() {
 
   const targetLang = document.getElementById("repTargetLang").value;
 
-  // Build the share link for client — role + room + client's expected language baked in
+  // Build the share link for client — role + room + client's expected language baked in.
+  // Voice choices are NOT put in the link — they live server-side per room,
+  // set only by the rep when they start the session, so the client can never
+  // see or change them via the URL.
   const base = `${location.origin}${location.pathname}`;
   const shareUrl = `${base}?room=${encodeURIComponent(roomCode)}&role=client&lang=${targetLang}`;
 
@@ -458,12 +551,17 @@ function copyLink() {
 // ── Rep joins after sharing link ──────────────────────────────────────────────
 async function repJoin(roomCode) {
   document.getElementById("createRoomBtn").disabled = true;
-  const sourceLang = document.getElementById("repSourceLang").value;
-  const targetLang = document.getElementById("repTargetLang").value;
+  const sourceLang   = document.getElementById("repSourceLang").value;
+  const targetLang   = document.getElementById("repTargetLang").value;
+  const repVoice     = document.getElementById("repVoiceSelect").value;
+  const clientVoice  = document.getElementById("clientVoiceSelect").value;
   try {
-    await startTranslation(roomCode, "rep", sourceLang, targetLang);
+    await startTranslation(roomCode, "rep", sourceLang, targetLang, {
+      repVoice, clientVoice
+    });
     showCallScreen(roomCode, "rep");
   } catch (e) {
+    if (e.expired) { leaveRoom("expired"); return; }
     document.getElementById("repError").textContent = e.message;
     document.getElementById("createRoomBtn").disabled = false;
   }
@@ -490,9 +588,10 @@ async function clientJoin() {
   const repLang    = getParam("repLang") || "en-IN"; // default rep speaks English
 
   try {
-    await startTranslation(roomCode, "client", clientLang, repLang, clientName);
+    await startTranslation(roomCode, "client", clientLang, repLang, { clientName });
     showCallScreen(roomCode, "client");
   } catch (e) {
+    if (e.expired) { leaveRoom("expired"); return; }
     document.getElementById("clientError").textContent = e.message;
     document.getElementById("clientJoinBtn").disabled = false;
   }
@@ -500,8 +599,7 @@ async function clientJoin() {
 
 // ── Show call screen ──────────────────────────────────────────────────────────
 function showCallScreen(roomCode, role) {
-  document.getElementById("repScreen").classList.remove("active");
-  document.getElementById("clientScreen").classList.remove("active");
+  document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
   document.getElementById("callScreen").classList.add("active");
 
   document.getElementById("callRoomBadge").textContent = `Room: ${roomCode}`;
@@ -516,6 +614,11 @@ function showCallScreen(roomCode, role) {
     roleBadge.className   = "role-badge client";
     document.getElementById("theyHearLabel").textContent = "Rep hears";
   }
+
+  // Reset mute button for the new session
+  const muteBtn = document.getElementById("muteBtn");
+  muteBtn.textContent = "🎤 Mute";
+  muteBtn.classList.remove("active");
 }
 
 // ══════════════════════════════════════════════════
@@ -528,23 +631,25 @@ let sourceNode    = null;
 let processorNode = null;
 let playbackCtx   = null;
 let nextStartTime = 0;
-let isMuted       = false;
+let isMuted       = false;   // auto-mute while translated audio is playing
+let manuallyMuted = false;   // user pressed the Mute button themselves
 let muteTimer     = null;
 let activeRoom    = null;
 let activeRole    = null;
-let expiryTimeout = null;
+let activeRoleAtEnd = null;  // captured role at the moment the call ends, for the ended screen
 
-// --- NEW: local speaking-detection state ---
+// --- local speaking-detection state ---
 let localSpeaking     = false;
 let speakingStopTimer = null;
 const SPEAKING_THRESHOLD   = 0.02;  // RMS level considered "speaking" — tune per mic
 const SPEAKING_HOLD_MS     = 700;   // how long to wait after volume drops before saying "stopped"
 
-async function startTranslation(roomCode, role, sourceLang, targetLang, clientName) {
+async function startTranslation(roomCode, role, sourceLang, targetLang, extra = {}) {
   activeRoom = roomCode;
   activeRole = role;
   if (playbackCtx) { playbackCtx.close(); playbackCtx = null; }
   isMuted = false;
+  manuallyMuted = false;
   localSpeaking = false;
 
   // Request mic
@@ -566,10 +671,11 @@ async function startTranslation(roomCode, role, sourceLang, targetLang, clientNa
   const CHUNK_SAMPLES = rate * 0.5;
 
   processorNode.onaudioprocess = (e) => {
-    if (isMuted) return;
+    // Gate on BOTH auto-mute (playback in progress) and manual mute (user pressed Mute)
+    if (isMuted || manuallyMuted) return;
     const input = e.inputBuffer.getChannelData(0);
 
-    // --- NEW: lightweight volume-based speaking detector ---
+    // --- lightweight volume-based speaking detector ---
     let sumSquares = 0;
     for (let i = 0; i < input.length; i++) sumSquares += input[i] * input[i];
     const rms = Math.sqrt(sumSquares / input.length);
@@ -615,7 +721,6 @@ async function startTranslation(roomCode, role, sourceLang, targetLang, clientNa
 
   return new Promise((resolve, reject) => {
     ws.onopen = () => {
-      // Send client name along with start message (if provided)
       const startMsg = {
         type:       "start",
         roomCode:   roomCode,
@@ -623,8 +728,12 @@ async function startTranslation(roomCode, role, sourceLang, targetLang, clientNa
         sourceLang: sourceLang,
         targetLang: targetLang
       };
-      if (clientName) {
-        startMsg.clientName = clientName;
+      // Client name (client only)
+      if (extra.clientName) startMsg.clientName = extra.clientName;
+      // Voice choices — REP ONLY. The client build never sets these.
+      if (role === "rep") {
+        if (extra.repVoice)    startMsg.repVoice    = extra.repVoice;
+        if (extra.clientVoice) startMsg.clientVoice = extra.clientVoice;
       }
       ws.send(JSON.stringify(startMsg));
     };
@@ -638,14 +747,12 @@ async function startTranslation(roomCode, role, sourceLang, targetLang, clientNa
       }
       else if (msg.type === "partner_joined") {
         setPartnerStatus("joined", "✅ Connected! Both parties are in the room.");
-        // If rep receives client name, display it
         if (activeRole === "rep" && msg.clientName) {
           displayClientName(msg.clientName);
         }
       }
       else if (msg.type === "partner_left") {
         setPartnerStatus("left", "⚠️ The other person has left the room.");
-        // Hide client name display when partner leaves
         document.getElementById("clientNameDisplay").style.display = "none";
       }
       else if (msg.type === "partner_speaking") {
@@ -670,31 +777,35 @@ async function startTranslation(roomCode, role, sourceLang, targetLang, clientNa
         enqueueAudio(msg.audio);
       }
       else if (msg.type === "meeting_info") {
-        // Show meeting info (rep only)
         const infoEl = document.getElementById("meetingInfo");
         infoEl.classList.add("visible");
         document.getElementById("meetingCreatedAt").textContent = `Created: ${msg.createdAt}`;
         document.getElementById("meetingExpiresAt").textContent = `Expires: ${msg.expiresAt}`;
       }
       else if (msg.type === "meeting_expiring") {
-        // Show expiry warning (rep only)
         const warningEl = document.getElementById("expiryWarning");
         warningEl.classList.add("visible");
         document.getElementById("expiryTimer").textContent = msg.minutesRemaining;
-        
-        // Also show browser alert if page is active
+
         if (document.visibilityState === "visible") {
           alert(`⚠️ Meeting Expiring Soon!\n\n${msg.message}`);
         }
       }
       else if (msg.type === "meeting_expired") {
-        // Meeting expired - show overlay
-        showExpiredOverlay(msg.message);
+        // Meeting expired mid-call — take everyone to the dedicated expired screen
+        leaveRoom("expired");
+      }
+      else if (msg.type === "meeting_ended") {
+        // The rep ended the session (left / disconnected) — client sees a
+        // dedicated "meeting has ended" screen, not the rep dashboard.
+        leaveRoom(msg.reason === "host_left" ? "host_ended" : "left");
       }
       else if (msg.type === "error") {
         if (msg.stage === "room") {
           if (msg.expired) {
-            showExpiredOverlay(msg.detail);
+            const err = new Error(msg.detail);
+            err.expired = true;
+            reject(err);
           } else {
             setPartnerStatus("waiting", "⏳ Waiting for the other person to join…");
           }
@@ -717,19 +828,77 @@ function displayClientName(name) {
   displayEl.style.display = "block";
 }
 
-function showExpiredOverlay(message) {
-  document.getElementById("expiredOverlay").classList.add("visible");
-  document.getElementById("expiredMessage").textContent = message || "This meeting link has expired. Please ask the sales representative to generate a new link.";
-  document.getElementById("partnerStatus").className = "partner-status expired";
-  setMicStatus("⛔ Meeting Expired", "waiting");
+// ── Mic mute toggle (Gmeet-style, user-controlled) ────────────────────────────
+function toggleMute() {
+  manuallyMuted = !manuallyMuted;
+  const btn = document.getElementById("muteBtn");
+
+  if (manuallyMuted) {
+    btn.textContent = "🔇 Unmute";
+    btn.classList.add("active");
+    setMicStatus("🔇 Muted by you.", "muted");
+    // If we were mid-speech, tell the partner we've stopped so their
+    // "speaking" indicator doesn't get stuck on.
+    if (localSpeaking) {
+      localSpeaking = false;
+      clearTimeout(speakingStopTimer);
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "speaking", value: false }));
+      }
+    }
+  } else {
+    btn.textContent = "🎤 Mute";
+    btn.classList.remove("active");
+    if (!isMuted) setMicStatus("✅ Listening — speak now.", "listening");
+  }
 }
 
-function leaveRoom() {
-  // Clear expiry timeout
-  if (expiryTimeout) {
-    clearTimeout(expiryTimeout);
-    expiryTimeout = null;
+// ── Ended / left / expired screen ─────────────────────────────────────────────
+function showEndedScreen(reason) {
+  document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
+  document.getElementById("endedScreen").classList.add("active");
+
+  const icon  = document.getElementById("endedIcon");
+  const title = document.getElementById("endedTitle");
+  const msg   = document.getElementById("endedMessage");
+  const btn   = document.getElementById("endedActionBtn");
+  btn.style.display = "none";
+
+  if (reason === "host_ended") {
+    icon.textContent = "📴";
+    title.textContent = "Meeting has ended";
+    msg.textContent = "The sales representative has ended this session. Thank you for joining!";
+  } else if (reason === "expired") {
+    icon.textContent = "⛔";
+    title.textContent = "Meeting link has expired";
+    msg.textContent = "This meeting link is no longer active. Please ask the sales representative for a new link.";
+  } else {
+    icon.textContent = "👋";
+    title.textContent = "You have left the meeting";
+    msg.textContent = "Thank you for using Live Translator!";
   }
+
+  // Only a rep gets a way to jump straight into starting a new session.
+  if (activeRoleAtEnd === "rep") {
+    btn.style.display = "inline-block";
+  }
+}
+
+function restartAsRep() {
+  document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
+  document.getElementById("repScreen").classList.add("active");
+  document.getElementById("createRoomBtn").disabled = false;
+  document.getElementById("createRoomBtn").textContent = "🔗 Create Room & Get Share Link";
+  document.getElementById("createRoomBtn").onclick = createRoom;
+  document.getElementById("shareBox").classList.remove("visible");
+}
+
+// ── Leave / end a session ─────────────────────────────────────────────────────
+// reason: undefined  -> the user themselves pressed Leave
+//         "expired"  -> meeting expired (client or rep)
+//         "host_ended" -> rep ended the session, client is being notified
+function leaveRoom(reason) {
+  const roleAtLeave = activeRole;
 
   if (ws?.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: "stop" }));
@@ -738,47 +907,44 @@ function leaveRoom() {
   clearTimeout(muteTimer);
   clearTimeout(speakingStopTimer);
   isMuted = false;
+  manuallyMuted = false;
   localSpeaking = false;
   try { processorNode?.disconnect(); } catch {}
   try { sourceNode?.disconnect(); } catch {}
   try { audioCtx?.close(); } catch {}
   mediaStream?.getTracks().forEach(t => t.stop());
 
-  // Hide expiry elements
-  document.getElementById("expiredOverlay").classList.remove("visible");
+  document.getElementById("callScreen").classList.remove("active");
   document.getElementById("expiryWarning").classList.remove("visible");
   document.getElementById("meetingInfo").classList.remove("visible");
   document.getElementById("clientNameDisplay").style.display = "none";
-
-  // Check if user was client or rep for proper redirect
-  const wasClient = activeRole === "client";
-  
-  // Reset UI
-  document.getElementById("callScreen").classList.remove("active");
-  document.getElementById("repScreen").classList.add("active");
-  
-  // Reset rep-specific UI
-  document.getElementById("createRoomBtn").disabled = false;
-  document.getElementById("createRoomBtn").textContent = "🔗 Create Room & Get Share Link";
-  document.getElementById("createRoomBtn").onclick = createRoom;
-  document.getElementById("shareBox").classList.remove("visible");
   document.getElementById("youSaidText").textContent  = "—";
   document.getElementById("theyHearText").textContent = "—";
   showCallError("");
-  
-  // If user was a client, show a message indicating meeting has ended
-  if (wasClient) {
-    // Show a temporary message on the rep screen for client
-    const errorEl = document.getElementById("repError");
-    errorEl.textContent = "✅ Meeting has ended. Thank you for using Live Translator!";
-    errorEl.style.color = "#1a7a3c";
-    setTimeout(() => {
-      errorEl.textContent = "";
-      errorEl.style.color = "#b3261e";
-    }, 5000);
+
+  const muteBtn = document.getElementById("muteBtn");
+  muteBtn.textContent = "🎤 Mute";
+  muteBtn.classList.remove("active");
+
+  activeRoleAtEnd = roleAtLeave;
+
+  if (reason === "expired") {
+    // Meeting expired — dedicated screen for whoever this happens to.
+    showEndedScreen("expired");
+  } else if (roleAtLeave === "rep") {
+    // Rep pressing Leave (normal end-of-call) goes back to their own
+    // dashboard so they can start the next session.
+    document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
+    document.getElementById("repScreen").classList.add("active");
+    document.getElementById("createRoomBtn").disabled = false;
+    document.getElementById("createRoomBtn").textContent = "🔗 Create Room & Get Share Link";
+    document.getElementById("createRoomBtn").onclick = createRoom;
+    document.getElementById("shareBox").classList.remove("visible");
+  } else {
+    // Client: either they pressed Leave themselves, or the rep ended the call.
+    showEndedScreen(reason || "left");
   }
 
-  // Reset active role
   activeRole = null;
   activeRoom = null;
 }
@@ -786,11 +952,15 @@ function leaveRoom() {
 // ── mute while playing ────────────────────────────────────────────────────────
 function muteMic(durationMs) {
   isMuted = true;
-  setMicStatus("🔇 Playing translation — mic paused…", "playing");
+  if (!manuallyMuted) setMicStatus("🔇 Playing translation — mic paused…", "playing");
   clearTimeout(muteTimer);
   muteTimer = setTimeout(() => {
     isMuted = false;
-    setMicStatus("✅ Listening — speak now.", "listening");
+    if (manuallyMuted) {
+      setMicStatus("🔇 Muted by you.", "muted");
+    } else {
+      setMicStatus("✅ Listening — speak now.", "listening");
+    }
   }, durationMs + 800); // extra headroom for speaker output latency
 }
 
@@ -820,9 +990,9 @@ async function enqueueAudio(base64) {
   const playMs = (nextStartTime - ctx.currentTime) * 1000;
   muteMic(playMs);
 
-  // --- NEW: tell the server so it can ask the ORIGINAL SPEAKER's device
-  // to pause its mic too — otherwise, without earphones, this device's
-  // speaker output gets picked back up by the other person's open mic. ---
+  // Tell the server so it can ask the ORIGINAL SPEAKER's device to pause
+  // its mic too — otherwise, without earphones, this device's speaker
+  // output gets picked back up by the other person's open mic.
   if (ws?.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ type: "audio_playing", ms: Math.ceil(playMs) }));
   }

@@ -15,7 +15,12 @@ if (!SARVAM_API_KEY) {
 const STT_URL       = "wss://api.sarvam.ai/speech-to-text/ws";
 const TTS_URL       = "https://api.sarvam.ai/text-to-speech";
 const TRANSLATE_URL = "https://api.sarvam.ai/translate";
-const DEFAULT_SPEAKER = "priya";
+
+// Fallback voices if the rep never picks one (shouldn't normally happen —
+// the rep screen always sends a choice — but keep sane defaults just in case).
+const DEFAULT_REP_VOICE    = "shubh"; // male
+const DEFAULT_CLIENT_VOICE = "priya"; // female
+
 const MEETING_EXPIRY_HOURS = 1; // Meeting expires after 1 hour
 const WARNING_MINUTES = 5; // Warning 5 minutes before expiry
 
@@ -25,23 +30,27 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/session" });
 
 // ── rooms ─────────────────────────────────────────────────────────────────────
-// rooms = { 
-//   "roomCode": { 
-//     rep: wsClient, 
+// rooms = {
+//   "roomCode": {
+//     rep: wsClient,
 //     client: wsClient,
-//     clientName: null,  // Store client name
+//     clientName: null,       // Store client name
+//     repVoice: "shubh",      // TTS voice used for REP's translated speech (client hears this)
+//     clientVoice: "priya",   // TTS voice used for CLIENT's translated speech (rep hears this)
 //     createdAt: timestamp,
 //     expiryWarned: false
-//   } 
+//   }
 // }
 const rooms = {};
 
 function getRoom(code) {
   if (!rooms[code]) {
-    rooms[code] = { 
-      rep: null, 
+    rooms[code] = {
+      rep: null,
       client: null,
-      clientName: null,  // Initialize client name
+      clientName: null,
+      repVoice: DEFAULT_REP_VOICE,
+      clientVoice: DEFAULT_CLIENT_VOICE,
       createdAt: Date.now(),
       expiryWarned: false
     };
@@ -69,7 +78,7 @@ function cleanRoom(roomCode, role) {
 function isMeetingExpired(roomCode) {
   const room = rooms[roomCode];
   if (!room) return true;
-  
+
   const now = Date.now();
   const expiryTime = room.createdAt + (MEETING_EXPIRY_HOURS * 60 * 60 * 1000);
   return now > expiryTime;
@@ -78,7 +87,7 @@ function isMeetingExpired(roomCode) {
 function getTimeUntilExpiry(roomCode) {
   const room = rooms[roomCode];
   if (!room) return 0;
-  
+
   const now = Date.now();
   const expiryTime = room.createdAt + (MEETING_EXPIRY_HOURS * 60 * 60 * 1000);
   return Math.max(0, expiryTime - now);
@@ -86,7 +95,7 @@ function getTimeUntilExpiry(roomCode) {
 
 function getISTTime(timestamp) {
   const date = new Date(timestamp);
-  return date.toLocaleString('en-IN', { 
+  return date.toLocaleString('en-IN', {
     timeZone: 'Asia/Kolkata',
     year: 'numeric',
     month: '2-digit',
@@ -215,11 +224,19 @@ wss.on("connection", (clientWs) => {
       safeSend(partnerWs, { type: "caption", lang: "translated", text: outText });
     }
 
+    // Which voice speaks this? The voice a LISTENER hears is tied to who is
+    // speaking, not who is listening: rep's words are read out in "repVoice",
+    // client's words are read out in "clientVoice" — both configured by the rep.
+    const room = rooms[roomCode];
+    const speaker = myRole === "rep"
+      ? (room?.repVoice || DEFAULT_REP_VOICE)
+      : (room?.clientVoice || DEFAULT_CLIENT_VOICE);
+
     // Synthesize and send audio to PARTNER
-    speakQueue = speakQueue.then(() => synthesizeAndSend(outText, partnerWs, targetLang));
+    speakQueue = speakQueue.then(() => synthesizeAndSend(outText, partnerWs, targetLang, speaker));
   }
 
-  async function synthesizeAndSend(text, targetWs, langCode) {
+  async function synthesizeAndSend(text, targetWs, langCode, speaker) {
     try {
       const res = await fetch(TTS_URL, {
         method: "POST",
@@ -230,7 +247,7 @@ wss.on("connection", (clientWs) => {
         body: JSON.stringify({
           text,
           language_code: langCode,
-          speaker: DEFAULT_SPEAKER,
+          speaker: speaker || DEFAULT_CLIENT_VOICE,
           model: "bulbul:v3",
           pace: 1.0,
           output_audio_codec: "wav"
@@ -267,7 +284,6 @@ wss.on("connection", (clientWs) => {
 
       const room = rooms[roomCode];
       const timeUntilExpiry = getTimeUntilExpiry(roomCode);
-      const expiryTimeMs = MEETING_EXPIRY_HOURS * 60 * 60 * 1000;
 
       // Check if meeting expired
       if (timeUntilExpiry <= 0) {
@@ -277,9 +293,9 @@ wss.on("connection", (clientWs) => {
           message: "This meeting has expired. Please ask the sales representative to generate a new link.",
           time: getISTTime(Date.now())
         };
-        
+
         safeSend(clientWs, expiryMsg);
-        
+
         // Also notify partner if connected
         const partnerWs = getPartner(roomCode, myRole);
         if (partnerWs) {
@@ -288,7 +304,7 @@ wss.on("connection", (clientWs) => {
 
         // Close STT connection
         closeUpstream();
-        
+
         // Clear interval
         clearInterval(expiryInterval);
         expiryInterval = null;
@@ -300,14 +316,14 @@ wss.on("connection", (clientWs) => {
       if (minutesUntilExpiry <= WARNING_MINUTES && !room.expiryWarned) {
         // Mark as warned to avoid multiple warnings
         room.expiryWarned = true;
-        
+
         const warningMsg = {
           type: "meeting_expiring",
           message: `⚠️ This meeting link will expire in ${Math.ceil(minutesUntilExpiry)} minutes. Please generate a new link if you need more time.`,
           time: getISTTime(Date.now()),
           minutesRemaining: Math.ceil(minutesUntilExpiry)
         };
-        
+
         // Only send warning to rep
         if (myRole === "rep") {
           safeSend(clientWs, warningMsg);
@@ -329,7 +345,7 @@ wss.on("connection", (clientWs) => {
 
       // Check if room exists and if it's expired
       const room = getRoom(roomCode);
-      
+
       // If room is expired, don't allow joining
       if (isMeetingExpired(roomCode)) {
         safeSend(clientWs, {
@@ -348,6 +364,13 @@ wss.on("connection", (clientWs) => {
         console.log(`[room:${roomCode}] Client name: ${msg.clientName}`);
       }
 
+      // Only the REP can set voice choices — client never sends these.
+      if (myRole === "rep") {
+        if (msg.repVoice)    room.repVoice    = msg.repVoice;
+        if (msg.clientVoice) room.clientVoice = msg.clientVoice;
+        console.log(`[room:${roomCode}] Voices set — rep: ${room.repVoice}, client: ${room.clientVoice}`);
+      }
+
       // Join the room
       room[myRole] = clientWs;
       console.log(`[room:${roomCode}] ${myRole} joined at ${getISTTime(Date.now())}`);
@@ -356,9 +379,9 @@ wss.on("connection", (clientWs) => {
       const partnerWs = getPartner(roomCode, myRole);
       if (partnerWs?.readyState === WebSocket.OPEN) {
         // Include client name in partner_joined message if available
-        const joinMsg = { 
-          type: "partner_joined", 
-          role: myRole 
+        const joinMsg = {
+          type: "partner_joined",
+          role: myRole
         };
         // If the joining user is client, send their name to rep
         if (myRole === "client" && room.clientName) {
@@ -377,7 +400,7 @@ wss.on("connection", (clientWs) => {
           expiresAt: getISTTime(expiryTime),
           expiryMinutes: MEETING_EXPIRY_HOURS * 60
         });
-        
+
         // Start expiry monitoring for this room
         startExpiryMonitoring();
       }
@@ -422,21 +445,28 @@ wss.on("connection", (clientWs) => {
 
   clientWs.on("close", () => {
     console.log(`[room:${roomCode}] ${myRole} disconnected at ${getISTTime(Date.now())}`);
-    
-    // Notify partner that other person left
+
+    // Notify partner that other person left.
+    // If the REP disconnects, the meeting is effectively over for the
+    // client — tell them explicitly so they see a proper "meeting ended"
+    // screen instead of just a generic "partner left" status.
     const partnerWs = getPartner(roomCode, myRole);
     if (partnerWs?.readyState === WebSocket.OPEN) {
-      safeSend(partnerWs, { type: "partner_left" });
+      if (myRole === "rep") {
+        safeSend(partnerWs, { type: "meeting_ended", reason: "host_left" });
+      } else {
+        safeSend(partnerWs, { type: "partner_left" });
+      }
     }
-    
+
     closeUpstream();
-    
+
     // Clean up interval
     if (expiryInterval) {
       clearInterval(expiryInterval);
       expiryInterval = null;
     }
-    
+
     if (roomCode && myRole) cleanRoom(roomCode, myRole);
   });
 
