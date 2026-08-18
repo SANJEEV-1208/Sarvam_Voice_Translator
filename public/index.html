@@ -145,6 +145,11 @@
   .ended-card .ended-icon { font-size: 3.2rem; margin-bottom: 10px; }
   .ended-card h2 { font-size: 1.25rem; margin: 0 0 10px; color: #111; }
   .ended-card p { font-size: 0.92rem; color: #666; margin: 0 0 20px; }
+  .helloleads-link {
+    color: #534AB7; font-size: 0.9rem; font-weight: 600;
+    text-decoration: none;
+  }
+  .helloleads-link:hover { text-decoration: underline; }
 
   /* Call screen */
   .call-header {
@@ -152,7 +157,11 @@
     margin-bottom: 16px; gap: 8px; flex-wrap: wrap;
   }
   .call-header-left { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-  .call-header-right { display:flex; gap:8px; align-items:center; }
+
+  .call-controls {
+    display: flex; justify-content: center; gap: 12px;
+    margin-top: 18px;
+  }
   .room-badge {
     background: #EEEDFE; color: #3C3489;
     padding: 4px 12px; border-radius: 99px; font-size: 0.85rem; font-weight: 500;
@@ -422,10 +431,6 @@
       <span class="room-badge" id="callRoomBadge">Room: —</span>
       <span class="role-badge" id="callRoleBadge">—</span>
     </div>
-    <div class="call-header-right">
-      <button class="btn-mute" id="muteBtn" onclick="toggleMute()">🎤 Mute</button>
-      <button class="btn-stop" onclick="leaveRoom()">Leave</button>
-    </div>
   </div>
 
   <!-- Client name display for rep -->
@@ -464,6 +469,11 @@
   </div>
 
   <div id="callError" class="err"></div>
+
+  <div class="call-controls">
+    <button class="btn-mute" id="muteBtn" onclick="toggleMute()">🎤 Mute</button>
+    <button class="btn-stop" onclick="leaveRoom()">Leave</button>
+  </div>
 </div>
 
 <!-- ══════════════════════════════════════════════════
@@ -477,6 +487,11 @@
     <button class="btn-primary" id="endedActionBtn" style="display:none;width:auto;padding:10px 24px;" onclick="restartAsRep()">
       🔗 Start New Session
     </button>
+    <p style="margin-top:4px;">
+      <a href="https://www.helloleads.io/" target="_blank" rel="noopener noreferrer" class="helloleads-link">
+        🌐 Visit HelloLeads
+      </a>
+    </p>
   </div>
 </div>
 
