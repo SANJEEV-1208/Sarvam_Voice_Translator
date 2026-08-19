@@ -1,23 +1,34 @@
 # Environment variables — never commit your API keys
+project/.env
+project/.env.local
+project/.env.production
 .env
 .env.local
 .env.production
 
-# Dependencies — reinstalled via npm install
+# Dependencies — reinstalled via npm install (inside project folder)
+project/node_modules/
 node_modules/
 
 # Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+project/npm-debug.log*
+project/yarn-debug.log*
+project/yarn-error.log*
 
 # OS files
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Editor folders
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # Runtime data
 pids/
@@ -26,3 +37,35 @@ pids/
 # Build output (if added later)
 dist/
 build/
+project/dist/
+project/build/
+
+# Logs
+logs/
+*.log
+project/logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+project/tmp/
+project/temp/
+
+# Docker local overrides (optional)
+docker-compose.override.yml
+
+# Test files
+test/
+tests/
+__tests__/
+coverage/
+project/test/
+project/tests/
+project/__tests__/
+project/coverage/
+
+# Other
+.prettierrc
+.eslintrc
+.editorconfig

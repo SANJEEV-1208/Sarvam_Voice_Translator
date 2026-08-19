@@ -1,0 +1,64 @@
+# Git
+.git/
+.gitignore
+.github/
+
+# Node modules (inside project folder)
+project/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files (inside project folder)
+project/.env
+project/.env.local
+project/.env.*.local
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+lerna-debug.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Docker files (ignore local overrides, but keep the main ones)
+docker-compose.override.yml
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Test files
+test/
+tests/
+__tests__/
+coverage/
+
+# Documentation
+README.md
+docs/
+*.md
+
+# Other
+.prettierrc
+.eslintrc
+.editorconfig
+
+# Setup script (optional - can be ignored for production)
+# setup.sh
